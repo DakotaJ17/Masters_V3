@@ -1,0 +1,2665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>SSS Analytics | Small-Sided Soccer Performance Engine</title>
+  <meta name="theme-color" content="#1e293b" id="meta-theme-color" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="SSS Analytics" />
+  <script>
+    /* Apply the saved theme before first paint so there is no dark flash */
+    (function () {
+      try { if (localStorage.getItem('sss_theme') === 'light') document.documentElement.classList.add('light'); } catch (e) {}
+    })();
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+  <style>
+    html { -webkit-text-size-adjust: 100%; }
+    body { overflow-x: hidden; }
+    button, select, input, label { touch-action: manipulation; }
+
+    /* ---- Mobile (phones) ---- */
+    @media (max-width: 767px) {
+      /* 16px inputs stop iOS Safari from zooming the page on focus */
+      input, select, textarea { font-size: 16px !important; }
+      /* Room for the bottom tab bar + iPhone home indicator */
+      body { padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px)); }
+      #main-nav {
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+        padding-bottom: env(safe-area-inset-bottom, 0px);
+        background: rgba(15, 23, 42, 0.97);
+        backdrop-filter: blur(8px);
+        border-top: 1px solid #334155;
+      }
+      #main-nav button { flex: 1 1 0; min-width: 0; flex-direction: column; gap: 2px; padding: 8px 2px; font-size: 10px; line-height: 1.1; }
+      #main-nav button i { font-size: 16px; }
+      #main-nav button .nav-label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+    }
+    /* Sticky first columns so player names stay visible while scrolling stat tables */
+    .sticky-col { position: sticky; left: 0; z-index: 1; background: #1e293b; }
+    thead .sticky-col { background: #0f172a; z-index: 2; }
+    .sticky-col-2 { position: sticky; left: 3.25rem; z-index: 1; background: #1e293b; box-shadow: 4px 0 6px -4px rgba(0,0,0,.5); }
+    thead .sticky-col-2 { background: #0f172a; z-index: 2; }
+    @media (min-width: 768px) { .sticky-col, .sticky-col-2 { position: static; box-shadow: none; } }
+
+    /* ================= THEME: color-scheme ================= */
+    html { color-scheme: dark; }
+    html.light { color-scheme: light; }
+
+    /* ================= LIGHT THEME (html.light) =================
+       Remaps the dark slate palette to a high-contrast light one,
+       tuned for reading in direct sunlight. Dark mode is untouched. */
+    html.light body.bg-slate-900 { background-color: #eef2f7; color: #0f172a; }
+
+    /* Surfaces */
+    html.light .bg-slate-950 { background-color: #e2e8f0; }
+    html.light .bg-slate-950\/80 { background-color: rgba(15, 23, 42, 0.45); }
+    html.light .bg-slate-900 { background-color: #f8fafc; }
+    html.light .bg-slate-900\/90,
+    html.light .bg-slate-900\/80,
+    html.light .bg-slate-900\/70,
+    html.light .bg-slate-900\/60 { background-color: #f1f5f9; }
+    html.light .bg-slate-900\/40 { background-color: #f8fafc; }
+    html.light .bg-slate-800,
+    html.light .bg-slate-800\/90,
+    html.light .bg-slate-800\/80 { background-color: #ffffff; }
+    html.light .bg-slate-800\/60,
+    html.light .bg-slate-800\/40 { background-color: #f1f5f9; }
+    html.light .bg-slate-700 { background-color: #e2e8f0; }
+    html.light .bg-slate-600 { background-color: #94a3b8; }
+    html.light .to-slate-800\/90 { --tw-gradient-to: #ffffff var(--tw-gradient-to-position); }
+
+    /* Hover surfaces */
+    html.light .hover\:bg-slate-600:hover { background-color: #cbd5e1; }
+    html.light .hover\:bg-slate-700:hover { background-color: #e2e8f0; }
+    html.light .hover\:bg-slate-800:hover { background-color: #f1f5f9; }
+    html.light .hover\:bg-slate-700\/40:hover { background-color: #f1f5f9; }
+    html.light .hover\:bg-rose-900\/60:hover { background-color: #fecdd3; }
+
+    /* Borders */
+    html.light .border-slate-700,
+    html.light .border-slate-700\/80,
+    html.light .border-slate-700\/70 { border-color: #cbd5e1; }
+    html.light .border-slate-700\/60,
+    html.light .border-slate-700\/50,
+    html.light .border-slate-800 { border-color: #e2e8f0; }
+    html.light .border-slate-600 { border-color: #94a3b8; }
+    html.light .divide-slate-700\/60 > :not([hidden]) ~ :not([hidden]) { border-color: #e2e8f0; }
+    html.light .hover\:border-slate-600:hover,
+    html.light .hover\:border-slate-700:hover { border-color: #94a3b8; }
+    html.light .focus\:border-amber-400:focus { border-color: #d97706; }
+
+    /* Neutral text */
+    html.light .text-white,
+    html.light .text-slate-100 { color: #0f172a; }
+    html.light .text-slate-200 { color: #1e293b; }
+    html.light .text-slate-300 { color: #334155; }
+    html.light .text-slate-400,
+    html.light .text-slate-500 { color: #64748b; }
+    html.light .text-slate-600 { color: #94a3b8; }
+    html.light .hover\:text-white:hover { color: #0f172a; }
+    html.light .hover\:text-slate-200:hover { color: #1e293b; }
+    html.light .bg-emerald-600.text-white { color: #ffffff; }
+
+    /* Accent text: darker shades so they stay readable on white */
+    html.light .text-amber-400,
+    html.light .text-amber-600,
+    html.light .hover\:text-amber-400:hover,
+    html.light .group:hover .group-hover\:text-amber-400 { color: #b45309; }
+    html.light .text-amber-300,
+    html.light .text-amber-200 { color: #92400e; }
+    html.light .text-emerald-400 { color: #047857; }
+    html.light .text-emerald-300 { color: #065f46; }
+    html.light .text-sky-400,
+    html.light .text-sky-300 { color: #0369a1; }
+    html.light .text-indigo-400 { color: #4338ca; }
+    html.light .text-indigo-200 { color: #3730a3; }
+    html.light .text-cyan-400 { color: #0e7490; }
+    html.light .text-teal-400 { color: #0f766e; }
+    html.light .text-purple-400,
+    html.light .text-purple-300 { color: #7e22ce; }
+    html.light .text-rose-400,
+    html.light .hover\:text-rose-300:hover { color: #be123c; }
+
+    /* Table sticky columns */
+    html.light .sticky-col, html.light .sticky-col-2 { background: #ffffff; }
+    html.light thead .sticky-col, html.light thead .sticky-col-2 { background: #f1f5f9; }
+    html.light .sticky-col-2 { box-shadow: 4px 0 6px -4px rgba(15, 23, 42, .2); }
+
+    /* Active tab: solid dark chip so it is obvious outdoors */
+    html.light #main-nav button.bg-slate-700 { background-color: #0f172a; color: #ffffff; }
+    html.light #main-nav button.bg-slate-700 i { color: inherit !important; }
+    @media (max-width: 767px) {
+      html.light #main-nav { background: rgba(255, 255, 255, 0.98); border-top-color: #cbd5e1; }
+    }
+    @media (min-width: 768px) {
+      html.light .md\:bg-slate-900\/60 { background-color: #f1f5f9; }
+      html.light .md\:border-slate-700\/80 { border-color: #cbd5e1; }
+    }
+
+    /* Tactical pitch: real-grass green with white lines */
+    html.light #pitch-board {
+      background-color: #2f8f4e;
+      background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.06) 0, rgba(255,255,255,0.06) 56px, transparent 56px, transparent 112px);
+      border-color: #1f6f3a;
+    }
+    html.light #pitch-board .bg-emerald-950\/40 { background-color: transparent; }
+    html.light #pitch-board .border-emerald-500\/20 { border-color: rgba(255, 255, 255, 0.65); }
+    html.light #pitch-slots-container .text-amber-400 { color: #ffffff; text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6); }
+
+    /* Theme toggle button */
+    #theme-toggle { -webkit-tap-highlight-color: transparent; }
+
+    @media print {
+      .no-print { display: none !important; }
+      body { background: #fff !important; color: #000 !important; }
+      .print-card { box-shadow: none !important; border: 1px solid #ddd !important; }
+    }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col font-sans">
+
+  <!-- Top Navigation Header -->
+  <header class="bg-slate-800 border-b border-slate-700 sticky top-0 z-30 shadow-md">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 md:py-3 flex items-center justify-between gap-3 md:flex-wrap md:gap-4">
+      <div class="flex items-center space-x-3 min-w-0">
+        <div class="w-10 h-10 shrink-0 rounded-xl bg-amber-500/20 border border-amber-500 flex items-center justify-center text-amber-400 font-bold text-xl shadow-inner">
+          <i class="fa-solid fa-futbol"></i>
+        </div>
+        <div>
+          <h1 class="text-lg md:text-xl font-bold tracking-tight text-white flex items-center gap-2">
+            SSS Analytics <span class="hidden sm:inline text-amber-400 text-xs font-semibold px-2 py-0.5 rounded bg-amber-400/10 border border-amber-400/30">Pro Engine</span>
+          </h1>
+          <p class="hidden md:block text-xs text-slate-400">Small-Sided Soccer Rotations & Tactical Performance Tracking</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs & Save/Load Hub -->
+      <div class="flex items-center gap-2 shrink-0">
+        <nav id="main-nav" class="flex items-stretch md:items-center gap-1 md:bg-slate-900/60 md:p-1 md:rounded-xl md:border md:border-slate-700/80">
+          <button onclick="switchTab('setup')" id="tab-btn-setup" class="px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all text-white bg-slate-700 shadow-sm flex items-center gap-1.5">
+            <i class="fa-solid fa-sliders"></i><span class="nav-label">Setup</span>
+          </button>
+          <button onclick="switchTab('matches')" id="tab-btn-matches" class="px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+            <i class="fa-solid fa-clipboard-list"></i><span class="nav-label">Matches</span>
+            <span id="match-badge" class="ml-0.5 px-1.5 py-0.2 text-[10px] bg-slate-800 rounded-full text-slate-300">0</span>
+          </button>
+          <button onclick="switchTab('standings')" id="tab-btn-standings" class="px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+            <i class="fa-solid fa-trophy text-amber-400"></i><span class="nav-label">Standings</span>
+          </button>
+          <button onclick="switchTab('analytics')" id="tab-btn-analytics" class="px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+            <i class="fa-solid fa-chart-line text-emerald-400"></i><span class="nav-label">Analytics</span>
+          </button>
+          <button onclick="switchTab('tactical')" id="tab-btn-tactical" class="px-3 py-1.5 rounded-lg text-xs md:text-sm font-medium transition-all text-slate-400 hover:text-slate-200 flex items-center gap-1.5">
+            <i class="fa-solid fa-users-gear text-sky-400"></i><span class="nav-label"><span class="md:hidden">Tactics</span><span class="hidden md:inline">Tactical Board</span></span>
+          </button>
+        </nav>
+
+        <button onclick="openSaveModal()" aria-label="Save or load" class="px-3 h-10 md:h-auto md:py-1.5 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-xl text-xs font-bold text-amber-400 flex items-center gap-1.5 shadow-sm transition whitespace-nowrap">
+          <i class="fa-solid fa-floppy-disk"></i>
+          <span class="hidden min-[380px]:inline">Save/Load</span>
+        </button>
+
+        <button id="theme-toggle" onclick="toggleTheme()" aria-label="Switch to light mode" title="Switch to light mode" class="w-10 h-10 md:w-9 md:h-9 shrink-0 bg-slate-700 hover:bg-slate-600 border border-slate-600 rounded-xl text-amber-400 flex items-center justify-center shadow-sm transition">
+          <i id="theme-toggle-icon" class="fa-solid fa-sun"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- ==================== TAB 1: SETUP ==================== -->
+    <section id="tab-setup" class="space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <div class="lg:col-span-1 bg-slate-800/80 border border-slate-700 rounded-2xl p-4 sm:p-6 shadow-xl">
+          <h2 class="text-lg font-bold text-white mb-4 flex items-center gap-2">
+            <i class="fa-solid fa-gear text-amber-400"></i> Session Settings
+          </h2>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Game Variant & Format</label>
+              <select id="cfg-format" onchange="recalculateTournamentMath()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400">
+                <option value="3" selected>Dutch Masters (3v3 Standard)</option>
+                <option value="4">Spanish Masters (4v4 Variant)</option>
+                <option value="2">2 vs 2 Micro-Pitch</option>
+                <option value="5">5 vs 5 Small-Sided</option>
+              </select>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Total Players</label>
+                <input type="number" inputmode="numeric" id="cfg-players" min="6" max="64" value="20" oninput="recalculateTournamentMath()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400" />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Fields Available</label>
+                <input type="number" inputmode="numeric" id="cfg-fields" min="1" max="10" value="2" oninput="recalculateTournamentMath()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400" />
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Target Games / Player</label>
+              <input type="number" inputmode="numeric" id="cfg-target-games" min="1" max="15" value="6" oninput="recalculateTournamentMath()" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-amber-400" />
+            </div>
+
+            <!-- Mathematical Summary Card -->
+            <div class="bg-slate-900/90 border border-slate-700/80 rounded-xl p-4 space-y-2 text-xs">
+              <div class="font-semibold text-amber-400 uppercase tracking-wider mb-1 flex items-center justify-between">
+                <span>Calculated Rotation Matrix</span>
+                <i class="fa-solid fa-calculator"></i>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>Active Players / Round:</span>
+                <span id="math-active-round" class="font-bold text-white">12</span>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>Resting (Bye) / Round:</span>
+                <span id="math-resting-round" class="font-bold text-amber-400">8</span>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>Total Rounds Needed:</span>
+                <span id="math-total-rounds" class="font-bold text-white">10</span>
+              </div>
+              <div class="flex justify-between text-slate-300">
+                <span>Total Matches to Play:</span>
+                <span id="math-total-matches" class="font-bold text-emerald-400">20</span>
+              </div>
+              <div class="border-t border-slate-800 pt-2 flex justify-between items-center text-slate-200">
+                <span class="font-semibold">Avg Games / Player:</span>
+                <span id="math-avg-games" class="font-bold text-sm text-amber-400">6.00</span>
+              </div>
+
+              <div id="math-uneven-warning" class="hidden mt-2 p-2 rounded bg-amber-500/10 border border-amber-500/30 text-[11px] text-amber-300 flex items-start gap-1.5">
+                <i class="fa-solid fa-triangle-exclamation mt-0.5"></i>
+                <span id="math-uneven-msg">Uneven rotation: games played per player will vary.</span>
+              </div>
+            </div>
+
+            <button onclick="generateTournamentSchedule()" class="w-full py-3 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-xl transition duration-150 flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20">
+              <i class="fa-solid fa-arrows-rotate"></i>
+              <span>Generate Schedule & Teams</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="lg:col-span-2 bg-slate-800/80 border border-slate-700 rounded-2xl p-4 sm:p-6 shadow-xl flex flex-col">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+            <div>
+              <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-users text-emerald-400"></i> Player Roster
+              </h2>
+              <p class="text-xs text-slate-400">Customize player names or fill from existing squad</p>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button onclick="resetRosterNames()" class="px-3 py-2 md:py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-semibold text-slate-300">
+                Auto-Fill 1..N
+              </button>
+              <button onclick="loadSampleRoster()" class="px-3 py-2 md:py-1.5 bg-emerald-600/30 text-emerald-300 border border-emerald-500/50 hover:bg-emerald-600/40 rounded-lg text-xs font-semibold">
+                Load Sample Roster
+              </button>
+            </div>
+          </div>
+
+          <div id="roster-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 lg:overflow-y-auto lg:max-h-[460px] lg:pr-2"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 2: MATCHES & SCOREKEEPER ==================== -->
+    <section id="tab-matches" class="hidden space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-800/80 border border-slate-700 p-4 rounded-2xl">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-whistle text-amber-400"></i> Pitch Scorekeeper
+          </h2>
+          <p class="text-xs text-slate-400">Enter scores as matches finish. Standings & Analytics recalculate dynamically.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+          <button onclick="clearAllScores()" class="px-3 py-2 bg-slate-700 hover:bg-slate-600 text-xs font-semibold text-slate-300 rounded-lg">
+            Clear Scores
+          </button>
+          <details class="relative">
+            <summary class="list-none [&::-webkit-details-marker]:hidden cursor-pointer select-none px-3 py-2 text-xs font-semibold text-slate-400 hover:text-slate-200 rounded-lg border border-dashed border-slate-600">Test tools</summary>
+            <div class="absolute right-0 z-20 mt-2 w-60 p-3 rounded-xl bg-slate-800 border border-slate-700 shadow-xl space-y-2">
+              <p class="text-[11px] text-slate-400">For trying the app out only. Fills every match with random scores.</p>
+              <button onclick="autoFillRandomScores()" class="w-full px-3 py-2 bg-indigo-600/30 border border-indigo-500/50 hover:bg-indigo-600/50 text-indigo-200 text-xs font-semibold rounded-lg flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-dice"></i> Sim Test Scores
+              </button>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <div id="rounds-container" class="space-y-6"></div>
+    </section>
+
+    <!-- ==================== TAB 3: STANDINGS ==================== -->
+    <section id="tab-standings" class="hidden space-y-6">
+      <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-800/80 border border-slate-700 p-4 rounded-2xl">
+        <div>
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-ranking-star text-amber-400"></i> SSS Standings (Rate & Averages)
+          </h2>
+          <p class="text-xs text-slate-400">Ranked by PPG &rarr; Net GD/G &rarr; GF/G &rarr; Win% to balance uneven games.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="exportTableCSV('standard')" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+            <i class="fa-solid fa-file-csv"></i> Export Standings CSV
+          </button>
+          <button onclick="window.print()" class="px-3 py-1.5 bg-amber-500 hover:bg-amber-400 rounded-lg text-xs font-bold text-slate-950 flex items-center gap-1.5">
+            <i class="fa-solid fa-print"></i> Print Standings
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-slate-800/80 border border-slate-700 rounded-2xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm whitespace-nowrap">
+            <thead class="bg-slate-900/90 text-xs text-slate-400 uppercase tracking-wider border-b border-slate-700">
+              <tr>
+                <th class="py-3 px-3 text-center sticky-col w-[3.25rem] min-w-[3.25rem]">Rank</th>
+                <th class="py-3 px-3 sticky-col-2 min-w-[8.5rem]">Player</th>
+                <th class="py-3 px-2 text-center">GP</th>
+                <th class="py-3 px-2 text-center text-slate-400">Record</th>
+                <th class="py-3 px-2 text-center font-bold text-white bg-slate-800/60">PPG</th>
+                <th class="py-3 px-2 text-center text-teal-400 font-bold">GD / G</th>
+                <th class="py-3 px-2 text-center text-sky-400">GF / G</th>
+                <th class="py-3 px-2 text-center text-purple-400">GA / G</th>
+                <th class="py-3 px-2 text-center text-slate-300">Total PTS</th>
+                <th class="py-3 px-2 text-center text-slate-300">Total GD</th>
+                <th class="py-3 px-2 text-center text-slate-400">Win %</th>
+              </tr>
+            </thead>
+            <tbody id="standings-table-body" class="divide-y divide-slate-700/60 font-mono text-xs"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 4: ADVANCED ANALYTICS ==================== -->
+    <section id="tab-analytics" class="hidden space-y-6">
+      
+      <!-- 8-Card KPI Grid -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-2.5 sm:gap-3.5">
+        
+        <!-- 1. Tournament MVP -->
+        <div class="bg-gradient-to-br from-amber-500/10 to-slate-800/90 border border-amber-500/40 rounded-2xl p-3 sm:p-4 flex flex-col justify-between relative overflow-hidden shadow-lg cursor-pointer hover:border-amber-400 transition" id="kpi-mvp-card">
+          <div class="absolute -right-3 -top-3 w-16 h-16 bg-amber-500/20 rounded-full blur-xl pointer-events-none"></div>
+          <div>
+            <div class="flex items-center justify-between text-xs font-semibold text-amber-400 uppercase tracking-wider mb-2">
+              <span>Tournament MVP</span>
+              <i class="fa-solid fa-trophy text-amber-400"></i>
+            </div>
+            <div id="kpi-mvp-player" class="text-base font-bold text-white truncate">-</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">OPR Composite Rating</div>
+          </div>
+          <div class="mt-3 flex items-baseline gap-1.5">
+            <span id="kpi-mvp-val" class="text-xl sm:text-2xl font-black text-amber-400">0.00</span>
+            <span class="text-[10px] text-slate-400">composite Z</span>
+          </div>
+        </div>
+
+        <!-- 2. Force Multiplier -->
+        <div class="bg-gradient-to-br from-indigo-500/10 to-slate-800/90 border border-indigo-500/40 rounded-2xl p-3 sm:p-4 flex flex-col justify-between relative overflow-hidden shadow-lg cursor-pointer hover:border-indigo-400 transition" id="kpi-relpm-card">
+          <div class="absolute -right-3 -top-3 w-16 h-16 bg-indigo-500/20 rounded-full blur-xl pointer-events-none"></div>
+          <div>
+            <div class="flex items-center justify-between text-xs font-semibold text-indigo-400 uppercase tracking-wider mb-2">
+              <span>Force Multiplier</span>
+              <i class="fa-solid fa-people-arrows text-indigo-400"></i>
+            </div>
+            <div id="kpi-relpm-player" class="text-base font-bold text-white truncate">-</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Relative &plusmn; (vs. Teammates)</div>
+          </div>
+          <div class="mt-3 flex items-baseline gap-1.5">
+            <span id="kpi-relpm-val" class="text-xl sm:text-2xl font-black text-indigo-400">0.00</span>
+            <span class="text-[10px] text-slate-400">rel diff</span>
+          </div>
+        </div>
+
+        <!-- 3. Impact Leader (RAPM) -->
+        <div class="bg-gradient-to-br from-cyan-500/10 to-slate-800/90 border border-cyan-500/40 rounded-2xl p-3 sm:p-4 flex flex-col justify-between relative overflow-hidden shadow-lg cursor-pointer hover:border-cyan-400 transition" id="kpi-rapm-card">
+          <div class="absolute -right-3 -top-3 w-16 h-16 bg-cyan-500/20 rounded-full blur-xl pointer-events-none"></div>
+          <div>
+            <div class="flex items-center justify-between text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-2">
+              <span>Impact Leader</span>
+              <i class="fa-solid fa-calculator text-cyan-400"></i>
+            </div>
+            <div id="kpi-rapm-player" class="text-base font-bold text-white truncate">-</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Regularized Adj &plusmn; (RAPM)</div>
+          </div>
+          <div class="mt-3 flex items-baseline gap-1.5">
+            <span id="kpi-rapm-val" class="text-xl sm:text-2xl font-black text-cyan-400">0.00</span>
+            <span class="text-[10px] text-slate-400">isolated &plusmn;</span>
+          </div>
+        </div>
+
+        <!-- 4. Top Competitor (MWC) -->
+        <div class="bg-gradient-to-br from-emerald-500/10 to-slate-800/90 border border-emerald-500/40 rounded-2xl p-3 sm:p-4 flex flex-col justify-between relative overflow-hidden shadow-lg cursor-pointer hover:border-emerald-400 transition" id="kpi-mwc-card">
+          <div class="absolute -right-3 -top-3 w-16 h-16 bg-emerald-500/20 rounded-full blur-xl pointer-events-none"></div>
+          <div>
+            <div class="flex items-center justify-between text-xs font-semibold text-emerald-400 uppercase tracking-wider mb-2">
+              <span>Top Competitor</span>
+              <i class="fa-solid fa-crown text-emerald-400"></i>
+            </div>
+            <div id="kpi-mwc-player" class="text-base font-bold text-white truncate">-</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Marginal Win Contrib (MWC)</div>
+          </div>
+          <div class="mt-3 flex items-baseline gap-1.5">
+            <span id="kpi-mwc-val" class="text-xl sm:text-2xl font-black text-emerald-400">0.00</span>
+            <span class="text-[10px] text-slate-400">pts added</span>
+          </div>
+        </div>
+
+        <!-- 5. Outcome Anchor (WPA) -->
+        <div class="bg-gradient-to-br from-teal-500/10 to-slate-800/90 border border-teal-500/40 rounded-2xl p-3 sm:p-4 flex flex-col justify-between relative overflow-hidden shadow-lg cursor-pointer hover:border-teal-400 transition" id="kpi-wpa-card">
+          <div class="absolute -right-3 -top-3 w-16 h-16 bg-teal-500/20 rounded-full blur-xl pointer-events-none"></div>
+          <div>
+            <div class="flex items-center justify-between text-xs font-semibold text-teal-400 uppercase tracking-wider mb-2">
+              <span>Outcome Anchor</span>
+              <i class="fa-solid fa-scale-balanced text-teal-400"></i>
+            </div>
+            <div id="kpi-wpa-player" class="text-base font-bold text-white truncate">-</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Win Probability Added (WPA)</div>
+          </div>
+          <div class="mt-3 flex items-baseline gap-1.5">
+            <span id="kpi-wpa-val" class="text-xl sm:text-2xl font-black text-teal-400">0.00</span>
+            <span class="text-[10px] text-slate-400">wpa / game</span>
+          </div>
+        </div>
+
+        <!-- 6. Goal Share Leader (GCR %) -->
+        <div class="bg-gradient-to-br from-sky-500/10 to-slate-800/90 border border-sky-500/40 rounded-2xl p-3 sm:p-4 flex flex-col justify-between relative overflow-hidden shadow-lg cursor-pointer hover:border-sky-400 transition" id="kpi-gcr-card">
+          <div class="absolute -right-3 -top-3 w-16 h-16 bg-sky-500/20 rounded-full blur-xl pointer-events-none"></div>
+          <div>
+            <div class="flex items-center justify-between text-xs font-semibold text-sky-400 uppercase tracking-wider mb-2">
+              <span>Goal Share Leader</span>
+              <i class="fa-solid fa-chart-pie text-sky-400"></i>
+            </div>
+            <div id="kpi-gcr-player" class="text-base font-bold text-white truncate">-</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Goal Contribution Ratio</div>
+          </div>
+          <div class="mt-3 flex items-baseline gap-1.5">
+            <span id="kpi-gcr-val" class="text-xl sm:text-2xl font-black text-sky-400">50.0%</span>
+            <span class="text-[10px] text-slate-400">goal control</span>
+          </div>
+        </div>
+
+        <!-- 7. Defensive Stopper (GAE) -->
+        <div class="bg-gradient-to-br from-purple-500/10 to-slate-800/90 border border-purple-500/40 rounded-2xl p-3 sm:p-4 flex flex-col justify-between relative overflow-hidden shadow-lg cursor-pointer hover:border-purple-400 transition" id="kpi-def-card">
+          <div class="absolute -right-3 -top-3 w-16 h-16 bg-purple-500/20 rounded-full blur-xl pointer-events-none"></div>
+          <div>
+            <div class="flex items-center justify-between text-xs font-semibold text-purple-400 uppercase tracking-wider mb-2">
+              <span>Defensive Stopper</span>
+              <i class="fa-solid fa-shield-halved text-purple-400"></i>
+            </div>
+            <div id="kpi-def-player" class="text-base font-bold text-white truncate">-</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Goals Saved vs. Average (GAE)</div>
+          </div>
+          <div class="mt-3 flex items-baseline gap-1.5">
+            <span id="kpi-gae-val" class="text-xl sm:text-2xl font-black text-purple-400">+0.00</span>
+            <span id="kpi-dqi-pct" class="text-[10px] text-slate-400">0% DQI</span>
+          </div>
+        </div>
+
+        <!-- 8. Mr. Clutch -->
+        <div class="bg-gradient-to-br from-rose-500/10 to-slate-800/90 border border-rose-500/40 rounded-2xl p-3 sm:p-4 flex flex-col justify-between relative overflow-hidden shadow-lg cursor-pointer hover:border-rose-400 transition" id="kpi-clutch-card">
+          <div class="absolute -right-3 -top-3 w-16 h-16 bg-rose-500/20 rounded-full blur-xl pointer-events-none"></div>
+          <div>
+            <div class="flex items-center justify-between text-xs font-semibold text-rose-400 uppercase tracking-wider mb-2">
+              <span>Mr. Clutch</span>
+              <i class="fa-solid fa-stopwatch text-rose-400"></i>
+            </div>
+            <div id="kpi-clutch-player" class="text-base font-bold text-white truncate">-</div>
+            <div class="text-[11px] text-slate-400 mt-0.5">Close Game Margin (&le;1)</div>
+          </div>
+          <div class="mt-3 flex items-baseline gap-1.5">
+            <span id="kpi-clutch-val" class="text-xl sm:text-2xl font-black text-rose-400">0.00</span>
+            <span class="text-[10px] text-slate-400">diff / game</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Action & Filter Bar -->
+      <div class="flex flex-wrap items-center justify-between gap-4 bg-slate-800/80 border border-slate-700 p-4 rounded-2xl">
+        <div class="flex items-center gap-3 w-full sm:w-auto">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">Sort By:</span>
+          <select id="adv-sort-select" onchange="renderAdvancedAnalyticsTable()" class="bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 md:py-1.5 text-xs text-white focus:outline-none focus:border-amber-400 min-w-0 flex-grow sm:flex-grow-0">
+            <option value="oprComposite" selected>OPR Composite (MVP)</option>
+            <option value="relPM">Relative &plusmn; (Force Multiplier)</option>
+            <option value="rapm">RAPM (Ridge Regression)</option>
+            <option value="mwc">Marginal Win Contrib (MWC)</option>
+            <option value="wpa">Winning Prob Added (WPA)</option>
+            <option value="gcrPct">Goal Contrib Ratio (GCR%)</option>
+            <option value="gae">Goals Against Expectation (GAE)</option>
+            <option value="oprPct">OPR% (GS &ge; 2)</option>
+            <option value="dqiPct">DQI% (GA &le; 1)</option>
+            <option value="clutchFactor">Clutch Margin</option>
+            <option value="zScore">Performance Rating (Z-Score)</option>
+          </select>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button onclick="exportTableCSV('advanced')" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-semibold text-slate-200 flex items-center gap-1.5">
+            <i class="fa-solid fa-file-csv"></i> Export Advanced CSV
+          </button>
+          <button onclick="window.print()" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-400 rounded-lg text-xs font-bold text-slate-950 flex items-center gap-1.5">
+            <i class="fa-solid fa-print"></i> Print Analytical Report
+          </button>
+        </div>
+      </div>
+
+      <!-- Advanced Analytics Main Table -->
+      <div class="bg-slate-800/80 border border-slate-700 rounded-2xl overflow-hidden shadow-xl">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs whitespace-nowrap">
+            <thead class="bg-slate-900/90 text-slate-400 uppercase tracking-wider border-b border-slate-700">
+              <tr>
+                <th class="py-3 px-3 text-center sticky-col w-[3.25rem] min-w-[3.25rem]">Rank</th>
+                <th class="py-3 px-3 font-bold text-white sticky-col-2 min-w-[8.5rem]">Player</th>
+                <th class="py-3 px-2 text-center">GP</th>
+                <th class="py-3 px-2 text-center text-amber-400 font-bold">OPR Comp</th>
+                <th class="py-3 px-2 text-center text-indigo-400 font-bold">Rel &plusmn;</th>
+                <th class="py-3 px-2 text-center text-cyan-400 font-bold">RAPM</th>
+                <th class="py-3 px-2 text-center text-emerald-400 font-bold">MWC</th>
+                <th class="py-3 px-2 text-center text-teal-400">WPA</th>
+                <th class="py-3 px-2 text-center text-sky-300 font-bold">GCR %</th>
+                <th class="py-3 px-2 text-center text-purple-300">GAE</th>
+                <th class="py-3 px-2 text-center">OPR%</th>
+                <th class="py-3 px-2 text-center">DQI%</th>
+                <th class="py-3 px-2 text-center text-rose-400">Clutch GD</th>
+                <th class="py-3 px-2 text-center">Z-Score</th>
+              </tr>
+            </thead>
+            <tbody id="analytics-table-body" class="divide-y divide-slate-700/60 font-mono"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Plain-English Tactical Metric Glossary & Guide -->
+      <div class="bg-slate-800/80 border border-slate-700/80 rounded-2xl p-4 sm:p-6 shadow-xl space-y-6">
+        <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700 pb-3">
+          <div>
+            <h3 class="text-base font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-book-open text-amber-400"></i> Player Metrics & Analytics Guide
+            </h3>
+            <p class="text-xs text-slate-400">Clear explanations of what each number means on the pitch</p>
+          </div>
+          <span class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 bg-slate-900 px-3 py-1 rounded-full border border-slate-700">
+            Coaching Reference
+          </span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 text-xs text-slate-300">
+          <div class="bg-slate-900/80 border border-amber-500/30 p-4 rounded-xl space-y-2">
+            <span class="font-bold text-amber-400 uppercase tracking-wide block">OPR Composite (Tournament MVP)</span>
+            <p><b class="text-white">What it means:</b> The all-around MVP score blending attack, defense, teammate lift, and clutch output.</p>
+            <p class="text-slate-400"><b class="text-slate-200">Look for:</b> Positive is above average; <b>+1.00</b> is dominant.</p>
+          </div>
+          <div class="bg-slate-900/80 border border-indigo-500/30 p-4 rounded-xl space-y-2">
+            <span class="font-bold text-indigo-400 uppercase tracking-wide block">Relative &plusmn; (Force Multiplier)</span>
+            <p><b class="text-white">What it means:</b> Player's total goal margin minus their rotating teammates' average margin.</p>
+            <p class="text-slate-400"><b class="text-slate-200">Look for:</b> High positive values prove the player lifts whatever squad they join.</p>
+          </div>
+          <div class="bg-slate-900/80 border border-cyan-500/30 p-4 rounded-xl space-y-2">
+            <span class="font-bold text-cyan-400 uppercase tracking-wide block">RAPM (Adjusted Plus-Minus)</span>
+            <p><b class="text-white">What it means:</b> Pure isolated goal impact removing teammate & opponent strength bias.</p>
+            <p class="text-slate-400"><b class="text-slate-200">Look for:</b> Positive values indicate high isolated talent independent of surroundings.</p>
+          </div>
+          <div class="bg-slate-900/80 border border-emerald-500/30 p-4 rounded-xl space-y-2">
+            <span class="font-bold text-emerald-400 uppercase tracking-wide block">MWC (Marginal Win Contribution)</span>
+            <p><b class="text-white">What it means:</b> Extra points won above tournament expectation (rewards upsets).</p>
+            <p class="text-slate-400"><b class="text-slate-200">Look for:</b> Identifies difference-makers who win matches their team was slated to lose.</p>
+          </div>
+          <div class="bg-slate-900/80 border border-teal-500/30 p-4 rounded-xl space-y-2">
+            <span class="font-bold text-teal-400 uppercase tracking-wide block">WPA (Win Probability Added)</span>
+            <p><b class="text-white">What it means:</b> Outcome rate: Win = +2, Tie = +1, Loss = -1 divided by games.</p>
+            <p class="text-slate-400"><b class="text-slate-200">Look for:</b> High scores belong to players who protect table points and refuse to lose.</p>
+          </div>
+          <div class="bg-slate-900/80 border border-sky-500/30 p-4 rounded-xl space-y-2">
+            <span class="font-bold text-sky-400 uppercase tracking-wide block">GCR % (Goal Share)</span>
+            <p><b class="text-white">What it means:</b> % of total match goals scored by this player's team.</p>
+            <p class="text-slate-400"><b class="text-slate-200">Look for:</b> 50% is parity; >60% controls the bulk of the action.</p>
+          </div>
+          <div class="bg-slate-900/80 border border-purple-500/30 p-4 rounded-xl space-y-2">
+            <span class="font-bold text-purple-300 uppercase tracking-wide block">GAE (Goals Saved vs. Avg)</span>
+            <p><b class="text-white">What it means:</b> Tournament mean goals conceded minus player's conceded rate.</p>
+            <p class="text-slate-400"><b class="text-slate-200">Look for:</b> Positive values represent lockdown defensive stoppers.</p>
+          </div>
+          <div class="bg-slate-900/80 border border-slate-700/80 p-4 rounded-xl space-y-2">
+            <span class="font-bold text-white uppercase tracking-wide block">OPR% & DQI%</span>
+            <p><b class="text-white">What it means:</b> OPR% = Games scoring 2+ goals; DQI% = Games allowing &le;1 goal.</p>
+            <p class="text-slate-400"><b class="text-slate-200">Look for:</b> Multi-goal consistency and defensive floor stability.</p>
+          </div>
+          <div class="bg-slate-900/80 border border-rose-500/30 p-4 rounded-xl space-y-2">
+            <span class="font-bold text-rose-400 uppercase tracking-wide block">Clutch Margin</span>
+            <p><b class="text-white">What it means:</b> Goal differential strictly in 1-goal nail-biters.</p>
+            <p class="text-slate-400"><b class="text-slate-200">Look for:</b> Positive values indicate high execution under pressure.</p>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==================== TAB 5: TACTICAL DEPTH CHART & BOARD ==================== -->
+    <section id="tab-tactical" class="hidden space-y-6">
+      
+      <!-- Prominent Coaching Disclaimer Notice -->
+      <div class="p-3.5 bg-amber-500/10 border border-amber-500/40 rounded-2xl flex items-start sm:items-center gap-3 text-xs text-amber-200 shadow-lg">
+        <div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400 shrink-0">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
+        <p class="font-medium leading-relaxed">
+          <b>Coaching Notice:</b> This is just a suggestion. Coaches should use their own evaluations to determine players, positions, and lineups.
+        </p>
+      </div>
+
+      <!-- Formation Controls & % Formation Fit Scorecard -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center bg-slate-800/80 border border-slate-700 p-4 rounded-2xl shadow-xl">
+        
+        <!-- Left: Formation Selector -->
+        <div class="lg:col-span-5 flex flex-wrap items-center gap-3">
+          <label class="text-xs font-bold uppercase tracking-wider text-slate-400 whitespace-nowrap">Tactical System:</label>
+          <select id="tactical-formation" onchange="renderTacticalPitchBoard()" class="bg-slate-900 border border-slate-700 rounded-xl px-3 py-2.5 sm:py-2 text-xs text-white focus:outline-none focus:border-amber-400 font-semibold flex-grow min-w-0">
+            <option value="4-2-3-1" selected>4-2-3-1 (Double Pivot)</option>
+            <option value="4-3-3">4-3-3 (Single Pivot)</option>
+            <option value="4-2-2-2">4-2-2-2 (Classic Shifted Modern)</option>
+            <option value="3-5-2">3-5-2 (Italian Style)</option>
+            <option value="3-4-3">3-4-3 (Attack NC)</option>
+          </select>
+        </div>
+
+        <!-- Center / Right: Team Formation Fit Rating -->
+        <div class="lg:col-span-7 flex flex-wrap items-center justify-between lg:justify-end gap-4 border-t lg:border-t-0 border-slate-700/80 pt-3 lg:pt-0">
+          <div class="flex items-center gap-3">
+            <div class="text-right">
+              <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Active System Fit</span>
+              <span class="text-xs text-slate-400" id="team-fit-name">4-2-3-1 Compatibility</span>
+            </div>
+            <div class="px-3.5 py-1.5 rounded-xl bg-slate-900 border border-sky-500/40 flex items-center gap-2 shadow-inner">
+              <span id="active-formation-fit-pct" class="text-xl font-black text-sky-400">0%</span>
+              <span class="text-[10px] text-slate-400 uppercase font-bold">Team Fit</span>
+            </div>
+          </div>
+
+          <!-- Quick Jump to Highest Match -->
+          <div class="text-xs bg-slate-900/60 border border-slate-700 px-3 py-1.5 rounded-xl flex items-center gap-2">
+            <span class="text-[10px] font-bold text-amber-400 uppercase"><i class="fa-solid fa-crown mr-1"></i>#1 Recommended:</span>
+            <span id="best-team-fit-tag" class="font-bold text-white text-xs font-mono">-</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Squad Formation Comparison Matrix (All 5 Systems Evaluated) -->
+      <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-4 shadow-xl space-y-2.5">
+        <div class="flex flex-wrap items-center justify-between gap-1 border-b border-slate-700 pb-2">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+            <i class="fa-solid fa-chart-column text-amber-400"></i> Squad Formation Fit Matrix (% Roster Compatibility)
+          </span>
+          <span class="text-[10px] text-slate-400">Calculated from opportunity-cost optimized starting assignments</span>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3" id="formation-comparison-grid"></div>
+      </div>
+
+      <!-- Tactical Pitch Board + Interactive Player Radar Panel -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Left 7 Cols: The Soccer Pitch Formation Board -->
+        <div id="pitch-board" class="lg:col-span-7 bg-slate-950 border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-2xl flex flex-col justify-between relative overflow-hidden min-h-[520px] sm:min-h-[590px]">
+          <div class="absolute inset-0 bg-emerald-950/40 pointer-events-none"></div>
+          <div class="absolute inset-x-8 top-0 h-24 border-b-2 border-x-2 border-emerald-500/20 rounded-b-xl pointer-events-none"></div>
+          <div class="absolute inset-x-20 top-0 h-10 border-b-2 border-x-2 border-emerald-500/20 rounded-b-lg pointer-events-none"></div>
+          <div class="absolute inset-x-0 top-1/2 -translate-y-1/2 h-0.5 border-t-2 border-emerald-500/20 pointer-events-none"></div>
+          <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-28 h-28 border-2 border-emerald-500/20 rounded-full pointer-events-none"></div>
+          <div class="absolute inset-x-8 bottom-0 h-24 border-t-2 border-x-2 border-emerald-500/20 rounded-t-xl pointer-events-none"></div>
+          <div class="absolute inset-x-20 bottom-0 h-10 border-t-2 border-x-2 border-emerald-500/20 rounded-t-lg pointer-events-none"></div>
+
+          <!-- Dynamic Starting Lineup Slots on Pitch -->
+          <div id="pitch-slots-container" class="relative z-10 w-full h-full flex flex-col justify-between py-2 space-y-5 sm:space-y-6"></div>
+        </div>
+
+        <!-- Right 5 Cols: Selected Player Tactical Radar & Fit Breakdown -->
+        <div id="radar-panel" class="lg:col-span-5 bg-slate-800/80 border border-slate-700 rounded-2xl p-4 sm:p-5 shadow-xl flex flex-col justify-between space-y-4">
+          <div class="border-b border-slate-700 pb-3 flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-compass-drafting text-sky-400"></i>
+                <span id="radar-player-name">Select a Player</span>
+              </h3>
+              <p class="text-[11px] text-slate-400" id="radar-player-sub">Click any pitch slot or depth list item to inspect</p>
+            </div>
+            <span id="radar-primary-badge" class="px-2.5 py-1 rounded bg-sky-500/20 text-sky-400 border border-sky-500/30 text-xs font-bold font-mono">
+              Role: -
+            </span>
+          </div>
+
+          <!-- SVG Radar Chart Container -->
+          <div class="flex items-center justify-center py-1">
+            <svg id="tactical-radar-svg" width="250" height="250" viewBox="0 0 250 250" class="overflow-visible max-w-full h-auto"></svg>
+          </div>
+
+          <!-- Positional Fit Breakdown -->
+          <div class="space-y-2 text-xs">
+            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center justify-between">
+              <span>Positional Fit Suitability</span>
+              <span class="text-amber-400 text-[10px]">Statistical Match</span>
+            </div>
+            <div id="radar-fit-bars" class="space-y-1.5 font-mono text-[11px]"></div>
+          </div>
+
+          <!-- Coaching Role Recommendation Insight -->
+          <div class="p-3 bg-slate-900/90 rounded-xl border border-slate-700/80 text-xs text-slate-300">
+            <div class="font-bold text-amber-400 uppercase text-[10px] mb-1 flex items-center gap-1">
+              <i class="fa-solid fa-lightbulb"></i> Tactical Profile:
+            </div>
+            <p id="radar-scouting-note" class="text-slate-300 leading-relaxed text-[11px]">
+              Run matches to generate positional profiles based on small-sided performance metrics.
+            </p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Positional Depth Chart Cards -->
+      <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-5 shadow-xl space-y-4">
+        <div class="border-b border-slate-700 pb-3 flex flex-wrap items-center justify-between gap-1">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-list-ol text-amber-400"></i> Squad Depth Chart by Position
+          </h3>
+          <span class="text-xs text-slate-400">Ranked by Individual Positional Fit % (Blue box = #1 Primary Role)</span>
+        </div>
+
+        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-2.5 sm:gap-3 text-xs" id="depth-chart-grid"></div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ==================== SAVE STATE & BACKUP MANAGER MODAL ==================== -->
+  <div id="save-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm hidden">
+    <div class="bg-slate-800 border border-slate-700 w-full max-w-xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] max-h-[92dvh]">
+      <div class="p-4 sm:p-5 border-b border-slate-700 flex items-center justify-between gap-2 bg-slate-900/80">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-10 h-10 shrink-0 rounded-xl bg-amber-500/20 border border-amber-500/50 flex items-center justify-center text-amber-400 font-bold text-lg">
+            <i class="fa-solid fa-floppy-disk"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Save State Manager</h3>
+            <p class="text-xs text-slate-400">Manage device save slots or export file backups</p>
+          </div>
+        </div>
+        <button onclick="closeSaveModal()" class="w-10 h-10 shrink-0 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="p-4 sm:p-5 space-y-5 text-xs text-slate-300 overflow-y-auto overscroll-contain min-h-0 flex-grow">
+        <div class="flex items-start gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30">
+          <i class="fa-solid fa-circle-check text-emerald-400 mt-0.5"></i>
+          <p id="autosave-status" class="text-[11px] text-slate-300 leading-relaxed"></p>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Save Current State as New Slot</label>
+          <div class="flex gap-2">
+            <input type="text" id="save-slot-name" placeholder="e.g. Tryouts Day 1" class="flex-grow min-w-0 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-amber-400" />
+            <button onclick="saveCurrentToSlot()" class="px-4 py-2 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded-lg transition whitespace-nowrap">
+              <i class="fa-solid fa-save mr-1"></i> Save
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <span class="font-semibold uppercase text-slate-400 text-[11px]">Saved Slots On This Device</span>
+            <span class="text-[10px] text-emerald-400 flex items-center gap-1">
+              <i class="fa-solid fa-circle-check"></i> Ready
+            </span>
+          </div>
+          <div id="save-slots-list" class="space-y-2 max-h-48 overflow-y-auto pr-1"></div>
+        </div>
+
+        <div class="border-t border-slate-700 pt-4">
+          <span class="font-semibold uppercase text-slate-400 text-[11px] block mb-2">File Backup & Cross-Device Sharing</span>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <button onclick="downloadTournamentJSON()" class="py-2.5 px-3 bg-slate-900 hover:bg-slate-700 border border-slate-700 rounded-xl font-semibold text-slate-200 flex items-center justify-center gap-2">
+              <i class="fa-solid fa-download text-amber-400"></i>
+              <span>Download File (.json)</span>
+            </button>
+            <label class="py-2.5 px-3 bg-slate-900 hover:bg-slate-700 border border-slate-700 rounded-xl font-semibold text-slate-200 flex items-center justify-center gap-2 cursor-pointer">
+              <i class="fa-solid fa-upload text-emerald-400"></i>
+              <span>Open File (.json)</span>
+              <input type="file" id="import-json-input" accept=".json" onchange="importTournamentJSON(event)" class="hidden" />
+            </label>
+          </div>
+        </div>
+
+        <div class="border-t border-slate-700 pt-4">
+          <span class="font-semibold uppercase text-slate-400 text-[11px] block mb-2">Paste Raw JSON (Mobile Quick Load)</span>
+          <textarea id="import-json-paste" rows="3" placeholder="Paste copied JSON text here..." class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2 text-[11px] text-white focus:outline-none focus:border-amber-400 font-mono"></textarea>
+          <button onclick="copyTournamentJSON()" class="mt-2 w-full py-2.5 bg-slate-900 hover:bg-slate-700 border border-slate-700 text-slate-200 font-bold rounded-xl transition text-xs flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-copy text-amber-400"></i>
+            <span>Copy Current Tournament JSON</span>
+          </button>
+          <button onclick="loadFromPastedJSON()" class="mt-2 w-full py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl transition text-xs flex items-center justify-center gap-1.5 shadow-md">
+            <i class="fa-solid fa-clipboard-check"></i>
+            <span>Load Pasted Tournament JSON</span>
+          </button>
+        </div>
+
+        <div class="border-t border-slate-700 pt-4">
+          <span class="font-semibold uppercase text-slate-400 text-[11px] block mb-2">Start Fresh</span>
+          <button onclick="startNewTournament()" class="w-full py-2.5 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/40 text-rose-400 font-bold rounded-xl transition text-xs flex items-center justify-center gap-1.5">
+            <i class="fa-solid fa-rotate-left"></i>
+            <span>New Tournament (clear current)</span>
+          </button>
+          <p class="mt-1.5 text-[10px] text-slate-500">Your named save slots and downloaded files are not affected. Save or download the current tournament first if you want to keep it.</p>
+        </div>
+      </div>
+
+      <div class="p-3 bg-slate-900 border-t border-slate-700 text-right shrink-0">
+        <button onclick="closeSaveModal()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-lg text-xs">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================== INTERACTIVE PLAYER MATCH LOG MODAL ==================== -->
+  <div id="player-modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm hidden">
+    <div class="bg-slate-800 border border-slate-700 w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] max-h-[90dvh]">
+      
+      <div class="p-4 sm:p-5 border-b border-slate-700 flex items-center justify-between gap-2 bg-slate-900/80">
+        <div class="flex items-center gap-3 min-w-0">
+          <div class="w-10 h-10 shrink-0 rounded-full bg-amber-500/20 border border-amber-500/50 flex items-center justify-center text-amber-400 font-bold text-lg" id="modal-player-avatar">
+            #
+          </div>
+          <div>
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+              <span id="modal-player-name">Player Name</span>
+              <span class="text-xs px-2 py-0.5 bg-slate-800 text-amber-400 rounded-md border border-slate-700" id="modal-player-id">ID: 1</span>
+            </h3>
+            <p class="text-xs text-slate-400">Full Chronological Tournament Match Log & Rotation History</p>
+          </div>
+        </div>
+        <button onclick="closePlayerModal()" class="w-10 h-10 shrink-0 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white flex items-center justify-center transition">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 p-3 sm:p-4 bg-slate-900/40 border-b border-slate-700/60 text-center text-xs">
+        <div class="bg-slate-800/80 p-2 rounded-lg border border-slate-700/60">
+          <div class="text-[10px] uppercase text-slate-400">Record</div>
+          <div class="font-bold text-white text-sm" id="modal-stat-record">0-0-0</div>
+        </div>
+        <div class="bg-slate-800/80 p-2 rounded-lg border border-slate-700/60">
+          <div class="text-[10px] uppercase text-slate-400">PPG</div>
+          <div class="font-bold text-amber-400 text-sm" id="modal-stat-ppg">0.00</div>
+        </div>
+        <div class="bg-slate-800/80 p-2 rounded-lg border border-slate-700/60">
+          <div class="text-[10px] uppercase text-slate-400">GD / Game</div>
+          <div class="font-bold text-teal-400 text-sm" id="modal-stat-gdg">+0.00</div>
+        </div>
+        <div class="bg-slate-800/80 p-2 rounded-lg border border-slate-700/60">
+          <div class="text-[10px] uppercase text-slate-400">OPR Comp</div>
+          <div class="font-bold text-amber-400 text-sm" id="modal-stat-comp">0.00</div>
+        </div>
+        <div class="bg-slate-800/80 p-2 rounded-lg border border-slate-700/60">
+          <div class="text-[10px] uppercase text-slate-400">Rel &plusmn;</div>
+          <div class="font-bold text-indigo-400 text-sm" id="modal-stat-relpm">+0.0</div>
+        </div>
+        <div class="bg-slate-800/80 p-2 rounded-lg border border-slate-700/60">
+          <div class="text-[10px] uppercase text-slate-400">RAPM</div>
+          <div class="font-bold text-cyan-400 text-sm" id="modal-stat-rapm">+0.00</div>
+        </div>
+      </div>
+
+      <div class="p-4 sm:p-5 overflow-y-auto overscroll-contain space-y-3 flex-grow min-h-0" id="modal-matches-container"></div>
+
+      <div class="p-3.5 bg-slate-900/90 border-t border-slate-700 text-xs text-slate-400 flex flex-wrap items-center justify-between gap-2">
+        <span class="flex items-center gap-1.5">
+          <i class="fa-solid fa-mug-hot text-amber-400"></i>
+          <span><b>Scheduled Rest / Bye Rounds:</b> <span id="modal-bye-rounds" class="text-white">None</span></span>
+        </span>
+        <button onclick="closePlayerModal()" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-lg text-xs">
+          Close
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <div id="toast" role="status" class="hidden fixed left-1/2 -translate-x-1/2 bottom-24 md:bottom-6 z-[60] max-w-[90vw] px-4 py-2.5 rounded-xl bg-slate-800 border border-slate-600 text-xs font-semibold text-slate-100 shadow-2xl text-center"></div>
+
+  <script>
+    let players = [];
+    let schedule = [];
+    let rounds = [];
+    let selectedRadarPlayerId = null;
+
+    const TACTICAL_FORMATIONS = {
+      '4-2-3-1': {
+        name: '4-2-3-1 (Double Pivot)',
+        style: 'Solid double defensive pivot protecting central spaces, flanked by quick wide outlets and a central playmaker.',
+        rows: [
+          [{ pos: 'ST', label: 'ST' }],
+          [{ pos: 'Wing', label: 'LAM' }, { pos: 'CAM', label: 'CAM' }, { pos: 'Wing', label: 'RAM' }],
+          [{ pos: 'CDM', label: 'LDM' }, { pos: 'CDM', label: 'RDM' }],
+          [{ pos: 'FB', label: 'LB' }, { pos: 'CB', label: 'LCB' }, { pos: 'CB', label: 'RCB' }, { pos: 'FB', label: 'RB' }]
+        ]
+      },
+      '4-3-3': {
+        name: '4-3-3 (Single Pivot)',
+        style: 'Single holding DM anchor unlocking two central box-to-box creators with aggressive wide wingers.',
+        rows: [
+          [{ pos: 'Wing', label: 'LW' }, { pos: 'ST', label: 'ST' }, { pos: 'Wing', label: 'RW' }],
+          [{ pos: 'CM', label: 'LCM' }, { pos: 'CDM', label: 'DM' }, { pos: 'CM', label: 'RCM' }],
+          [{ pos: 'FB', label: 'LB' }, { pos: 'CB', label: 'LCB' }, { pos: 'CB', label: 'RCB' }, { pos: 'FB', label: 'RB' }]
+        ]
+      },
+      '4-2-2-2': {
+        name: '4-2-2-2 (Classic Shifted Modern)',
+        style: 'Dual holding midfielders behind twin attacking playmakers in the half-spaces and two front-line strikers.',
+        rows: [
+          [{ pos: 'ST', label: 'LS' }, { pos: 'ST', label: 'RS' }],
+          [{ pos: 'CAM', label: 'LCAM' }, { pos: 'CAM', label: 'RCAM' }],
+          [{ pos: 'CDM', label: 'LDM' }, { pos: 'CDM', label: 'RDM' }],
+          [{ pos: 'FB', label: 'LB' }, { pos: 'CB', label: 'LCB' }, { pos: 'CB', label: 'RCB' }, { pos: 'FB', label: 'RB' }]
+        ]
+      },
+      '3-5-2': {
+        name: '3-5-2 (Italian Style)',
+        style: 'Three disciplined central defenders, high-workrate wingbacks, deep central midfield controller, and twin strikers.',
+        rows: [
+          [{ pos: 'ST', label: 'LS' }, { pos: 'ST', label: 'RS' }],
+          [{ pos: 'FB', label: 'LWB' }, { pos: 'CM', label: 'LCM' }, { pos: 'CDM', label: 'DM' }, { pos: 'CM', label: 'RCM' }, { pos: 'FB', label: 'RWB' }],
+          [{ pos: 'CB', label: 'LCB' }, { pos: 'CB', label: 'CB' }, { pos: 'CB', label: 'RCB' }]
+        ]
+      },
+      '3-4-3': {
+        name: '3-4-3 (Attack NC)',
+        style: 'Direct vertical attacking structure with wide midfield outlets supporting a dangerous front-three line.',
+        rows: [
+          [{ pos: 'Wing', label: 'LW' }, { pos: 'ST', label: 'ST' }, { pos: 'Wing', label: 'RW' }],
+          [{ pos: 'FB', label: 'LWB' }, { pos: 'CM', label: 'LCM' }, { pos: 'CM', label: 'RCM' }, { pos: 'FB', label: 'RWB' }],
+          [{ pos: 'CB', label: 'LCB' }, { pos: 'CB', label: 'CB' }, { pos: 'CB', label: 'RCB' }]
+        ]
+      }
+    };
+
+    function initDefaultRoster(count = 20) {
+      players = [];
+      for (let i = 1; i <= count; i++) {
+        players.push({ id: i, name: `Player ${i}` });
+      }
+      renderRosterInputs();
+      recalculateTournamentMath();
+    }
+
+    function renderRosterInputs() {
+      scheduleAutosave();
+      const container = document.getElementById('roster-grid');
+      container.innerHTML = '';
+      players.forEach((p) => {
+        const div = document.createElement('div');
+        div.className = "flex items-center gap-2 bg-slate-900/60 border border-slate-700/60 p-2 rounded-lg";
+        div.innerHTML = `
+          <span class="w-6 text-center text-xs font-bold text-slate-500">${p.id}</span>
+          <input type="text" value="${escapeHtml(p.name)}" 
+            onchange="updatePlayerName(${p.id}, this.value)"
+            class="w-full bg-slate-800 border border-slate-700 rounded px-2.5 py-2 md:py-1 text-xs text-white focus:outline-none focus:border-amber-400"
+            autocomplete="off" autocapitalize="words" enterkeyhint="done" placeholder="Player ${p.id}" />
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function updatePlayerName(id, val) {
+      const p = players.find(x => x.id === id);
+      if (p) p.name = val.trim() || `Player ${id}`;
+      scheduleAutosave();
+    }
+
+    function resetRosterNames() {
+      const count = parseInt(document.getElementById('cfg-players').value) || 20;
+      players = [];
+      for (let i = 1; i <= count; i++) {
+        players.push({ id: i, name: `Player ${i}` });
+      }
+      renderRosterInputs();
+    }
+
+    function loadSampleRoster() {
+      const sampleNames = [
+        "Alex", "Ben", "Carlos", "David", "Ethan",
+        "Felix", "Gabriel", "Henry", "Isaac", "Jack",
+        "Kieran", "Leo", "Mason", "Noah", "Oliver",
+        "Patrick", "Quinn", "Ryan", "Sam", "Thomas"
+      ];
+      const count = parseInt(document.getElementById('cfg-players').value) || 20;
+      players = [];
+      for (let i = 1; i <= count; i++) {
+        players.push({ id: i, name: sampleNames[i - 1] || `Player ${i}` });
+      }
+      renderRosterInputs();
+    }
+
+    function recalculateTournamentMath() {
+      scheduleAutosave();
+      const totalPlayers = parseInt(document.getElementById('cfg-players').value) || 20;
+      const fields = parseInt(document.getElementById('cfg-fields').value) || 2;
+      const teamSize = parseInt(document.getElementById('cfg-format').value) || 3;
+      const targetGames = parseInt(document.getElementById('cfg-target-games').value) || 6;
+
+      const activePerRound = fields * teamSize * 2;
+      const restingPerRound = Math.max(0, totalPlayers - activePerRound);
+      
+      const totalPlayerSlots = totalPlayers * targetGames;
+      const roundsNeeded = Math.ceil(totalPlayerSlots / activePerRound);
+      const totalMatches = roundsNeeded * fields;
+
+      const totalActiveAppearances = roundsNeeded * activePerRound;
+      const avgGamesPlayed = totalPlayers > 0 ? (totalActiveAppearances / totalPlayers) : 0;
+
+      document.getElementById('math-active-round').textContent = activePerRound;
+      document.getElementById('math-resting-round').textContent = restingPerRound;
+      document.getElementById('math-total-rounds').textContent = roundsNeeded;
+      document.getElementById('math-total-matches').textContent = totalMatches;
+      document.getElementById('math-avg-games').textContent = avgGamesPlayed.toFixed(2);
+
+      const warningBox = document.getElementById('math-uneven-warning');
+      const warningMsg = document.getElementById('math-uneven-msg');
+      if (totalActiveAppearances % totalPlayers !== 0) {
+        const floorGames = Math.floor(avgGamesPlayed);
+        const ceilGames = Math.ceil(avgGamesPlayed);
+        warningMsg.textContent = `Uneven rotation: Some players will play ${floorGames} games and some will play ${ceilGames} games. Standings automatically rank by per-game averages.`;
+        warningBox.classList.remove('hidden');
+      } else {
+        warningBox.classList.add('hidden');
+      }
+
+      if (players.length !== totalPlayers) {
+        if (players.length < totalPlayers) {
+          for (let i = players.length + 1; i <= totalPlayers; i++) {
+            players.push({ id: i, name: `Player ${i}` });
+          }
+        } else {
+          players = players.slice(0, totalPlayers);
+        }
+        renderRosterInputs();
+      }
+    }
+
+    function generateTournamentSchedule() {
+      const entered = countEnteredScores();
+      if (entered > 0 && !confirm(`A tournament is in progress with ${entered} score${entered === 1 ? '' : 's'} entered. Generating a new schedule will erase ${entered === 1 ? 'it' : 'them'}. Continue?`)) return;
+      const totalPlayers = players.length;
+      const fields = parseInt(document.getElementById('cfg-fields').value) || 2;
+      const teamSize = parseInt(document.getElementById('cfg-format').value) || 3;
+      const targetGames = parseInt(document.getElementById('cfg-target-games').value) || 6;
+
+      const activePerRound = fields * teamSize * 2;
+      const roundsNeeded = Math.ceil((totalPlayers * targetGames) / activePerRound);
+
+      const appearances = {};
+      players.forEach(p => {
+        appearances[p.id] = 0;
+      });
+
+      schedule = [];
+      rounds = [];
+      let matchCounter = 1;
+
+      for (let r = 1; r <= roundsNeeded; r++) {
+        const sortedCandidatePool = [...players].sort((a, b) => {
+          if (appearances[a.id] !== appearances[b.id]) {
+            return appearances[a.id] - appearances[b.id];
+          }
+          return Math.random() - 0.5;
+        });
+
+        const activeIds = sortedCandidatePool.slice(0, activePerRound).map(p => p.id);
+        const restingIds = sortedCandidatePool.slice(activePerRound).map(p => p.id);
+
+        activeIds.forEach(id => { appearances[id]++; });
+
+        const shuffled = activeIds.sort(() => Math.random() - 0.5);
+        const roundMatches = [];
+
+        for (let f = 1; f <= fields; f++) {
+          const matchPlayers = shuffled.splice(0, teamSize * 2);
+          const teamA = matchPlayers.slice(0, teamSize);
+          const teamB = matchPlayers.slice(teamSize);
+
+          const matchObj = {
+            id: matchCounter++,
+            round: r,
+            field: f,
+            teamA: { name: `Team A (Field ${f})`, players: teamA },
+            teamB: { name: `Team B (Field ${f})`, players: teamB },
+            scoreA: null,
+            scoreB: null,
+            completed: false
+          };
+
+          roundMatches.push(matchObj);
+          schedule.push(matchObj);
+        }
+
+        rounds.push({
+          roundNum: r,
+          matches: roundMatches,
+          restingIds: restingIds
+        });
+      }
+
+      renderMatches();
+      recalculateAllTables();
+      switchTab('matches');
+    }
+
+    function renderMatches() {
+      const container = document.getElementById('rounds-container');
+      container.innerHTML = '';
+      document.getElementById('match-badge').textContent = schedule.length;
+
+      rounds.forEach(rnd => {
+        const roundCard = document.createElement('div');
+        roundCard.className = "bg-slate-800/90 border border-slate-700 rounded-2xl p-3 sm:p-5 shadow-lg space-y-4 print-card";
+
+        let restingBadgesHtml = '';
+        if (rnd.restingIds && rnd.restingIds.length > 0) {
+          const restingNames = rnd.restingIds.map(id => getPlayerName(id)).join(', ');
+          restingBadgesHtml = `
+            <div class="text-xs bg-slate-900/80 border border-slate-700 px-3 py-1.5 rounded-lg text-slate-400">
+              <span class="font-bold text-amber-400 uppercase tracking-wider text-[10px] mr-1.5"><i class="fa-solid fa-mug-hot"></i> Bye / Rest:</span>
+              <span>${escapeHtml(restingNames)}</span>
+            </div>
+          `;
+        }
+
+        roundCard.innerHTML = `
+          <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-700/80 pb-3">
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-0.5 bg-amber-500/20 text-amber-400 border border-amber-500/30 font-black rounded-md text-xs">
+                ROUND ${rnd.roundNum}
+              </span>
+              <span class="text-xs text-slate-400">${rnd.matches.length} Matches</span>
+            </div>
+            ${restingBadgesHtml}
+          </div>
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4" id="round-${rnd.roundNum}-matches"></div>
+        `;
+
+        container.appendChild(roundCard);
+
+        const matchGrid = roundCard.querySelector(`#round-${rnd.roundNum}-matches`);
+        rnd.matches.forEach(m => {
+          const matchBox = document.createElement('div');
+          matchBox.className = "bg-slate-900/80 border border-slate-700/80 rounded-xl p-4 flex flex-col justify-between";
+
+          const teamANames = m.teamA.players.map(id => getPlayerName(id)).join(', ');
+          const teamBNames = m.teamB.players.map(id => getPlayerName(id)).join(', ');
+
+          matchBox.innerHTML = `
+            <div class="flex items-center justify-between text-xs text-slate-400 mb-2 border-b border-slate-800 pb-1.5">
+              <span class="font-bold text-slate-300"><i class="fa-solid fa-map-pin text-amber-400 mr-1"></i> Field ${m.field}</span>
+              <span class="text-[11px] text-slate-500">Match #${m.id}</span>
+            </div>
+            
+            <div class="grid grid-cols-1 sm:grid-cols-5 items-center gap-2 my-2">
+              <div class="sm:col-span-2 text-center sm:text-right">
+                <div class="text-xs font-bold text-white sm:truncate" title="${escapeHtml(teamANames)}">${escapeHtml(teamANames)}</div>
+                <div class="text-[10px] text-emerald-400 uppercase tracking-wider font-semibold">Team A</div>
+              </div>
+
+              <div class="sm:col-span-1 flex items-center justify-center gap-2 sm:gap-1 py-1">
+                <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="99" value="${m.scoreA !== null ? m.scoreA : ''}" 
+                  oninput="draftMatchScore(${m.id}, this.value, null)" onchange="updateMatchScore(${m.id}, this.value, null)" onfocus="this.select()"
+                  class="w-14 h-12 sm:w-9 sm:h-9 bg-slate-800 border ${m.completed ? 'border-amber-400/80 text-white' : 'border-slate-700 text-slate-300'} font-black text-center text-sm rounded-lg focus:outline-none focus:border-amber-400" placeholder="0" />
+                <span class="text-slate-600 font-bold">:</span>
+                <input type="number" inputmode="numeric" pattern="[0-9]*" min="0" max="99" value="${m.scoreB !== null ? m.scoreB : ''}" 
+                  oninput="draftMatchScore(${m.id}, null, this.value)" onchange="updateMatchScore(${m.id}, null, this.value)" onfocus="this.select()"
+                  class="w-14 h-12 sm:w-9 sm:h-9 bg-slate-800 border ${m.completed ? 'border-amber-400/80 text-white' : 'border-slate-700 text-slate-300'} font-black text-center text-sm rounded-lg focus:outline-none focus:border-amber-400" placeholder="0" />
+              </div>
+
+              <div class="sm:col-span-2 text-center sm:text-left">
+                <div class="text-xs font-bold text-white sm:truncate" title="${escapeHtml(teamBNames)}">${escapeHtml(teamBNames)}</div>
+                <div class="text-[10px] text-sky-400 uppercase tracking-wider font-semibold">Team B</div>
+              </div>
+            </div>
+          `;
+          matchGrid.appendChild(matchBox);
+        });
+      });
+    }
+
+    function updateMatchScore(matchId, valA, valB) {
+      const match = schedule.find(m => m.id === matchId);
+      if (!match) return;
+
+      if (valA !== null) match.scoreA = valA === '' ? null : parseInt(valA);
+      if (valB !== null) match.scoreB = valB === '' ? null : parseInt(valB);
+
+      match.completed = match.scoreA !== null && match.scoreB !== null && !isNaN(match.scoreA) && !isNaN(match.scoreB);
+      recalculateAllTables();
+    }
+
+    // Lightweight update while typing: keep the data (and autosave) current without
+    // recalculating every table on each keystroke. The full recalculation still runs on change.
+    function draftMatchScore(matchId, valA, valB) {
+      const match = schedule.find(m => m.id === matchId);
+      if (!match) return;
+      if (valA !== null) match.scoreA = valA === '' ? null : parseInt(valA);
+      if (valB !== null) match.scoreB = valB === '' ? null : parseInt(valB);
+      match.completed = match.scoreA !== null && match.scoreB !== null && !isNaN(match.scoreA) && !isNaN(match.scoreB);
+      scheduleAutosave();
+    }
+
+    function countEnteredScores() {
+      return schedule.filter(m => m.completed || m.scoreA !== null || m.scoreB !== null).length;
+    }
+
+    function autoFillRandomScores() {
+      const entered = countEnteredScores();
+      if (entered > 0 && !confirm(`${entered} match score${entered === 1 ? '' : 's'} already entered. Replace ${entered === 1 ? 'it' : 'them'} with random TEST scores? This cannot be undone.`)) return;
+      schedule.forEach(m => {
+        m.scoreA = Math.floor(Math.random() * 5);
+        m.scoreB = Math.floor(Math.random() * 5);
+        m.completed = true;
+      });
+      renderMatches();
+      recalculateAllTables();
+    }
+
+    function clearAllScores() {
+      const entered = countEnteredScores();
+      if (entered === 0) return;
+      if (!confirm(`Clear all ${entered} entered score${entered === 1 ? '' : 's'}? This cannot be undone.`)) return;
+      schedule.forEach(m => {
+        m.scoreA = null;
+        m.scoreB = null;
+        m.completed = false;
+      });
+      renderMatches();
+      recalculateAllTables();
+    }
+
+    function getPlayerName(id) {
+      const p = players.find(x => x.id === id);
+      return p ? p.name : `Player ${id}`;
+    }
+
+    // ==================== STATISTICAL & ADVANCED ANALYTICS ENGINE ====================
+    let standardStats = [];
+    let advancedStats = [];
+
+    function recalculateAllTables() {
+      computeStats();
+      renderStandingsTable();
+      renderAdvancedAnalyticsTable();
+      updateKPICards();
+      renderTacticalPitchBoard();
+      scheduleAutosave();
+    }
+
+    function solveLinearSystem(A, b) {
+      const n = A.length;
+      const M = A.map((row, i) => [...row, b[i]]);
+
+      for (let i = 0; i < n; i++) {
+        let maxRow = i;
+        for (let k = i + 1; k < n; k++) {
+          if (Math.abs(M[k][i]) > Math.abs(M[maxRow][i])) maxRow = k;
+        }
+        const temp = M[i]; M[i] = M[maxRow]; M[maxRow] = temp;
+
+        if (Math.abs(M[i][i]) < 1e-10) continue;
+
+        for (let k = i + 1; k < n; k++) {
+          const factor = M[k][i] / M[i][i];
+          for (let j = i; j <= n; j++) {
+            M[k][j] -= factor * M[i][j];
+          }
+        }
+      }
+
+      const x = new Array(n).fill(0);
+      for (let i = n - 1; i >= 0; i--) {
+        if (Math.abs(M[i][i]) < 1e-10) { x[i] = 0; continue; }
+        let sum = 0;
+        for (let j = i + 1; j < n; j++) sum += M[i][j] * x[j];
+        x[i] = (M[i][n] - sum) / M[i][i];
+      }
+      return x;
+    }
+
+    function computeStats() {
+      const completedGames = schedule.filter(m => m.completed);
+
+      const pMap = {};
+      players.forEach(p => {
+        pMap[p.id] = {
+          id: p.id,
+          name: p.name,
+          gp: 0,
+          w: 0,
+          d: 0,
+          l: 0,
+          pts: 0,
+          gf: 0,
+          ga: 0,
+          gd: 0,
+          oprCount: 0,
+          dqiCount: 0,
+          clutchGames: 0,
+          clutchGDTotal: 0,
+          actualPointsTotal: 0.0,
+          expectedPointsTotal: 0.0,
+          teammatesTotalGD: 0.0,
+          teammatesCount: 0,
+          rapm: 0.0
+        };
+      });
+
+      completedGames.forEach(m => {
+        const teamAIds = m.teamA.players;
+        const teamBIds = m.teamB.players;
+        const sA = m.scoreA;
+        const sB = m.scoreB;
+        const gdA = sA - sB;
+        const gdB = sB - sA;
+
+        teamAIds.forEach(id => {
+          const stat = pMap[id];
+          if (!stat) return;
+          stat.gp++;
+          stat.gf += sA;
+          stat.ga += sB;
+          stat.gd += gdA;
+          if (sA >= 2) stat.oprCount++;
+          if (sB <= 1) stat.dqiCount++;
+          if (Math.abs(gdA) <= 1) {
+            stat.clutchGames++;
+            stat.clutchGDTotal += gdA;
+          }
+          if (gdA > 0) {
+            stat.w++;
+            stat.pts += 3;
+            stat.actualPointsTotal += 1.0;
+          } else if (gdA === 0) {
+            stat.d++;
+            stat.pts += 1;
+            stat.actualPointsTotal += 0.5;
+          } else {
+            stat.l++;
+            stat.actualPointsTotal += 0.0;
+          }
+        });
+
+        teamBIds.forEach(id => {
+          const stat = pMap[id];
+          if (!stat) return;
+          stat.gp++;
+          stat.gf += sB;
+          stat.ga += sA;
+          stat.gd += gdB;
+          if (sB >= 2) stat.oprCount++;
+          if (sA <= 1) stat.dqiCount++;
+          if (Math.abs(gdB) <= 1) {
+            stat.clutchGames++;
+            stat.clutchGDTotal += gdB;
+          }
+          if (gdB > 0) {
+            stat.w++;
+            stat.pts += 3;
+            stat.actualPointsTotal += 1.0;
+          } else if (gdB === 0) {
+            stat.d++;
+            stat.pts += 1;
+            stat.actualPointsTotal += 0.5;
+          } else {
+            stat.l++;
+            stat.actualPointsTotal += 0.0;
+          }
+        });
+      });
+
+      completedGames.forEach(m => {
+        const teamAIds = m.teamA.players;
+        const teamBIds = m.teamB.players;
+
+        const avgGDA = teamAIds.reduce((sum, id) => sum + (pMap[id].gp > 0 ? pMap[id].gd / pMap[id].gp : 0), 0) / teamAIds.length;
+        const avgGDB = teamBIds.reduce((sum, id) => sum + (pMap[id].gp > 0 ? pMap[id].gd / pMap[id].gp : 0), 0) / teamBIds.length;
+
+        let expA = 0.5 + (avgGDA - avgGDB) * 0.08;
+        expA = Math.max(0.1, Math.min(0.9, expA));
+        const expB = 1.0 - expA;
+
+        teamAIds.forEach(id => {
+          pMap[id].expectedPointsTotal += expA;
+          teamAIds.filter(tId => tId !== id).forEach(tId => {
+            pMap[id].teammatesTotalGD += pMap[tId].gd;
+            pMap[id].teammatesCount++;
+          });
+        });
+
+        teamBIds.forEach(id => {
+          pMap[id].expectedPointsTotal += expB;
+          teamBIds.filter(tId => tId !== id).forEach(tId => {
+            pMap[id].teammatesTotalGD += pMap[tId].gd;
+            pMap[id].teammatesCount++;
+          });
+        });
+      });
+
+      const nPlayers = players.length;
+      if (completedGames.length > 0 && nPlayers > 0) {
+        const playerIndexMap = {};
+        players.forEach((p, idx) => { playerIndexMap[p.id] = idx; });
+
+        const XtX = Array.from({ length: nPlayers }, () => new Array(nPlayers).fill(0));
+        const Xty = new Array(nPlayers).fill(0);
+        const lambda = 2.5;
+
+        completedGames.forEach(m => {
+          const margin = m.scoreA - m.scoreB;
+          const row = new Array(nPlayers).fill(0);
+          m.teamA.players.forEach(id => { if (playerIndexMap[id] !== undefined) row[playerIndexMap[id]] = 1; });
+          m.teamB.players.forEach(id => { if (playerIndexMap[id] !== undefined) row[playerIndexMap[id]] = -1; });
+
+          for (let i = 0; i < nPlayers; i++) {
+            if (row[i] !== 0) {
+              Xty[i] += row[i] * margin;
+              for (let j = 0; j < nPlayers; j++) {
+                if (row[j] !== 0) XtX[i][j] += row[i] * row[j];
+              }
+            }
+          }
+        });
+
+        for (let i = 0; i < nPlayers; i++) XtX[i][i] += lambda;
+
+        const rapmBeta = solveLinearSystem(XtX, Xty);
+        players.forEach((p, idx) => {
+          if (pMap[p.id]) pMap[p.id].rapm = rapmBeta[idx] || 0.0;
+        });
+      }
+
+      const totalSessionGA = completedGames.reduce((acc, m) => acc + m.scoreA + m.scoreB, 0);
+      const totalSessionSlots = completedGames.reduce((acc, m) => acc + m.teamA.players.length + m.teamB.players.length, 0);
+      const sessionMeanGAGame = totalSessionSlots > 0 ? (totalSessionGA * (completedGames[0]?.teamA.players.length || 3)) / totalSessionSlots : 1.5;
+
+      const results = Object.values(pMap).map(p => {
+        const gp = p.gp;
+        const ppg = gp > 0 ? p.pts / gp : 0;
+        const gfAvg = gp > 0 ? p.gf / gp : 0;
+        const gaAvg = gp > 0 ? p.ga / gp : 0;
+        const gdAvg = gp > 0 ? p.gd / gp : 0;
+        const winPct = gp > 0 ? (p.w / gp) * 100 : 0;
+
+        const oprPct = gp > 0 ? (p.oprCount / gp) * 100 : 0;
+        const dqiPct = gp > 0 ? (p.dqiCount / gp) * 100 : 0;
+        const clutchFactor = p.clutchGames > 0 ? p.clutchGDTotal / p.clutchGames : 0;
+
+        const mwc = p.actualPointsTotal - p.expectedPointsTotal;
+        const wpa = gp > 0 ? ((2 * p.w) + (1 * p.d) - (1 * p.l)) / gp : 0;
+
+        const avgTeammateGD = p.teammatesCount > 0 ? p.teammatesTotalGD / p.teammatesCount : 0;
+        const relPM = p.gd - avgTeammateGD;
+        const gae = sessionMeanGAGame - gaAvg;
+
+        const totalGoals = p.gf + p.ga;
+        const gcrPct = totalGoals > 0 ? (p.gf / totalGoals) * 100 : 50.0;
+
+        return {
+          ...p,
+          ppg,
+          gfAvg,
+          gaAvg,
+          gdAvg,
+          winPct,
+          oprPct,
+          dqiPct,
+          clutchFactor,
+          mwc,
+          wpa,
+          relPM,
+          gae,
+          gcrPct
+        };
+      });
+
+      function calcZ(arr, key) {
+        const vals = arr.map(x => x[key]);
+        const mean = vals.reduce((a, b) => a + b, 0) / (vals.length || 1);
+        const std = Math.sqrt(vals.reduce((sum, v) => sum + Math.pow(v - mean, 2), 0) / (vals.length || 1)) || 1;
+        return { mean, std };
+      }
+
+      const zRel = calcZ(results, 'relPM');
+      const zWpa = calcZ(results, 'wpa');
+      const zGae = calcZ(results, 'gae');
+      const zGcr = calcZ(results, 'gcrPct');
+      const zClutch = calcZ(results, 'clutchFactor');
+      const zNet = calcZ(results, 'gdAvg');
+      const zOff = calcZ(results, 'gfAvg');
+      const zDQI = calcZ(results, 'dqiPct');
+      const zOPR = calcZ(results, 'oprPct');
+      const zRapm = calcZ(results, 'rapm');
+      const zMWC = calcZ(results, 'mwc');
+
+      results.forEach(r => {
+        r.zRelPM = (r.relPM - zRel.mean) / zRel.std;
+        r.zWPA = (r.wpa - zWpa.mean) / zWpa.std;
+        r.zGAE = (r.gae - zGae.mean) / zGae.std;
+        r.zGCR = (r.gcrPct - zGcr.mean) / zGcr.std;
+        r.zClutch = (r.clutchFactor - zClutch.mean) / zClutch.std;
+        r.zScore = (r.gdAvg - zNet.mean) / zNet.std;
+        r.zOff = (r.gfAvg - zOff.mean) / zOff.std;
+        r.zDQI = (r.dqiPct - zDQI.mean) / zDQI.std;
+        r.zOPR = (r.oprPct - zOPR.mean) / zOPR.std;
+        r.zRapm = (r.rapm - zRapm.mean) / zRapm.std;
+        r.zMWC = (r.mwc - zMWC.mean) / zMWC.std;
+
+        r.oprComposite = (r.zRelPM + r.zWPA + r.zGAE + r.zGCR + r.zClutch) / 5.0;
+
+        r.radar = {
+          attack: Math.max(15, Math.min(99, Math.round(50 + (r.zOff * 0.6 + r.zOPR * 0.4) * 18))),
+          defense: Math.max(15, Math.min(99, Math.round(50 + (r.zGAE * 0.6 + r.zDQI * 0.4) * 18))),
+          lift: Math.max(15, Math.min(99, Math.round(50 + r.zRelPM * 18))),
+          impact: Math.max(15, Math.min(99, Math.round(50 + (r.zRapm * 0.6 + r.zMWC * 0.4) * 18))),
+          clutch: Math.max(15, Math.min(99, Math.round(50 + (r.zClutch * 0.6 + r.zWPA * 0.4) * 18)))
+        };
+
+        // Helper: Downside penalty triggers only when performance is below session mean (Z < 0)
+        const penalty = (zVal, weight) => Math.max(0, -zVal) * weight;
+
+        // Two-Tiered Positional Formulas: Base Weights minus Archetype Downside Penalties
+        const rawFits = {
+          // CB: Rewards DQI/GAE/Clutch; docks players who cannot contain opponents (negative DQI)
+          CB:   (r.zDQI * 0.45) + (r.zGAE * 0.35) + (r.zClutch * 0.20) 
+                - penalty(r.zDQI, 0.30),
+
+          // FB: Two-way transition engine; docks players who leak goals (negative GAE)
+          FB:   (r.zGAE * 0.30) + (r.zOff * 0.30) + (r.zMWC * 0.25) + (r.zDQI * 0.15) 
+                - penalty(r.zGAE, 0.25),
+
+          // CDM: Central anchor & isolated impact; docks mental errors/choking leads (negative Clutch)
+          CDM:  (r.zGAE * 0.35) + (r.zRapm * 0.35) + (r.zWPA * 0.30) 
+                - penalty(r.zClutch, 0.30),
+
+          // CM: Two-way match controller; docks negative teammate drag (negative Rel ±)
+          CM:   (r.zScore * 0.35) + (r.zRelPM * 0.35) + (r.zGCR * 0.30) 
+                - penalty(r.zRelPM, 0.30),
+
+          // CAM: Playmaker & upset generator; docks disappearing against equal/better teams (negative MWC)
+          CAM:  (r.zMWC * 0.40) + (r.zClutch * 0.30) + (r.zOff * 0.30) 
+                - penalty(r.zMWC, 0.30),
+
+          // Wing: High-event wide driver; docks passive play pinned in own half (negative GCR)
+          Wing: (r.zGCR * 0.40) + (r.zOPR * 0.35) + (r.zRapm * 0.25) 
+                - penalty(r.zGCR, 0.25),
+
+          // ST: Primary finisher; docks lack of multi-goal scoring ceiling (negative OPR)
+          ST:   (r.zOff * 0.50) + (r.zOPR * 0.35) + (r.zGCR * 0.15) 
+                - penalty(r.zOPR, 0.30)
+        };
+
+        // Scale to 20-99% using expanded dispersion multiplier (20)
+        r.positionFits = {};
+        Object.keys(rawFits).forEach(pos => {
+          r.positionFits[pos] = Math.max(20, Math.min(99, Math.round(50 + rawFits[pos] * 20)));
+        });
+
+        const sortedFits = Object.entries(r.positionFits).sort((a, b) => b[1] - a[1]);
+        r.primaryPosition = sortedFits[0][0];
+        r.primaryScore = sortedFits[0][1];
+        r.secondaryPosition = sortedFits[1][0];
+        r.secondaryScore = sortedFits[1][1];
+      });
+
+      standardStats = [...results].sort((a, b) => {
+        if (b.ppg !== a.ppg) return b.ppg - a.ppg;
+        if (b.gdAvg !== a.gdAvg) return b.gdAvg - a.gdAvg;
+        if (b.gfAvg !== a.gfAvg) return b.gfAvg - a.gfAvg;
+        return b.winPct - a.winPct;
+      });
+
+      advancedStats = [...results];
+    }
+
+    function renderStandingsTable() {
+      const tbody = document.getElementById('standings-table-body');
+      tbody.innerHTML = '';
+
+      standardStats.forEach((p, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-700/40 transition-colors";
+
+        let rankBadge = `<span class="text-slate-400 font-medium">${idx + 1}</span>`;
+        if (idx === 0) rankBadge = `<span class="w-6 h-6 rounded-full bg-amber-400/20 text-amber-400 font-bold inline-flex items-center justify-center border border-amber-400/40 text-xs">1</span>`;
+        else if (idx === 1) rankBadge = `<span class="w-6 h-6 rounded-full bg-slate-300/20 text-slate-300 font-bold inline-flex items-center justify-center border border-slate-300/40 text-xs">2</span>`;
+        else if (idx === 2) rankBadge = `<span class="w-6 h-6 rounded-full bg-amber-700/20 text-amber-600 font-bold inline-flex items-center justify-center border border-amber-700/40 text-xs">3</span>`;
+
+        const gdColor = p.gdAvg > 0 ? 'text-teal-400 font-bold' : p.gdAvg < 0 ? 'text-rose-400 font-bold' : 'text-slate-400';
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 text-center sticky-col w-[3.25rem] min-w-[3.25rem]">${rankBadge}</td>
+          <td class="py-2.5 px-3 font-sans sticky-col-2 min-w-[8.5rem]">
+            <button onclick="openPlayerModal(${p.id})" class="font-semibold text-white hover:text-amber-400 flex items-center gap-1.5 transition text-left group py-1">
+              <span>${escapeHtml(p.name)}</span>
+              <span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-sky-400 border border-slate-700 font-mono">${p.primaryPosition || '-'}</span>
+              <i class="fa-solid fa-arrow-up-right-from-square text-[10px] text-slate-600 group-hover:text-amber-400 transition"></i>
+            </button>
+          </td>
+          <td class="py-2.5 px-2 text-center text-slate-300 font-bold">${p.gp}</td>
+          <td class="py-2.5 px-2 text-center text-slate-400">${p.w}-${p.d}-${p.l}</td>
+          <td class="py-2.5 px-2 text-center font-black text-amber-400 bg-slate-800/40 text-sm">${p.ppg.toFixed(2)}</td>
+          <td class="py-2.5 px-2 text-center ${gdColor}">${p.gdAvg > 0 ? '+' : ''}${p.gdAvg.toFixed(2)}</td>
+          <td class="py-2.5 px-2 text-center text-sky-400">${p.gfAvg.toFixed(2)}</td>
+          <td class="py-2.5 px-2 text-center text-purple-400">${p.gaAvg.toFixed(2)}</td>
+          <td class="py-2.5 px-2 text-center text-slate-300">${p.pts}</td>
+          <td class="py-2.5 px-2 text-center text-slate-400">${p.gd > 0 ? '+' : ''}${p.gd}</td>
+          <td class="py-2.5 px-2 text-center text-slate-400">${p.winPct.toFixed(1)}%</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderAdvancedAnalyticsTable() {
+      const sortKey = document.getElementById('adv-sort-select').value;
+      const sorted = [...advancedStats].sort((a, b) => b[sortKey] - a[sortKey]);
+
+      const tbody = document.getElementById('analytics-table-body');
+      tbody.innerHTML = '';
+
+      sorted.forEach((p, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-700/40 transition-colors";
+
+        const mwcColor = p.mwc > 0 ? 'text-emerald-400 font-bold' : p.mwc < 0 ? 'text-rose-400 font-bold' : 'text-slate-400';
+        const rapmColor = p.rapm > 0 ? 'text-cyan-400 font-bold' : p.rapm < 0 ? 'text-rose-400 font-bold' : 'text-slate-400';
+        const relColor = p.relPM > 0 ? 'text-indigo-400 font-bold' : p.relPM < 0 ? 'text-rose-400 font-bold' : 'text-slate-400';
+        const gaeColor = p.gae > 0 ? 'text-purple-300 font-bold' : p.gae < 0 ? 'text-rose-400 font-bold' : 'text-slate-400';
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 text-center text-slate-400 font-sans sticky-col w-[3.25rem] min-w-[3.25rem]">${idx + 1}</td>
+          <td class="py-2.5 px-3 font-sans sticky-col-2 min-w-[8.5rem]">
+            <button onclick="openPlayerModal(${p.id})" class="font-semibold text-white hover:text-amber-400 flex items-center gap-1.5 transition text-left group py-1">
+              <span>${escapeHtml(p.name)}</span>
+              <span class="text-[9px] px-1.5 py-0.2 rounded bg-slate-800 text-sky-400 border border-slate-700 font-mono">${p.primaryPosition || '-'}</span>
+              <i class="fa-solid fa-chart-simple text-[10px] text-slate-600 group-hover:text-amber-400 transition"></i>
+            </button>
+          </td>
+          <td class="py-2.5 px-2 text-center text-slate-400">${p.gp}</td>
+          <td class="py-2.5 px-2 text-center text-amber-400 font-bold">${p.oprComposite > 0 ? '+' : ''}${p.oprComposite.toFixed(2)}</td>
+          <td class="py-2.5 px-2 text-center ${relColor}">${p.relPM > 0 ? '+' : ''}${p.relPM.toFixed(1)}</td>
+          <td class="py-2.5 px-2 text-center ${rapmColor}">${p.rapm > 0 ? '+' : ''}${p.rapm.toFixed(2)}</td>
+          <td class="py-2.5 px-2 text-center ${mwcColor}">${p.mwc > 0 ? '+' : ''}${p.mwc.toFixed(2)}</td>
+          <td class="py-2.5 px-2 text-center text-teal-400">${p.wpa > 0 ? '+' : ''}${p.wpa.toFixed(2)}</td>
+          <td class="py-2.5 px-2 text-center text-sky-300 font-bold">${p.gcrPct.toFixed(1)}%</td>
+          <td class="py-2.5 px-2 text-center ${gaeColor}">${p.gae > 0 ? '+' : ''}${p.gae.toFixed(2)}</td>
+          <td class="py-2.5 px-2 text-center text-slate-300">${p.oprPct.toFixed(0)}%</td>
+          <td class="py-2.5 px-2 text-center text-slate-300">${p.dqiPct.toFixed(0)}%</td>
+          <td class="py-2.5 px-2 text-center text-rose-400">${p.clutchFactor > 0 ? '+' : ''}${p.clutchFactor.toFixed(2)}</td>
+          <td class="py-2.5 px-2 text-center text-slate-400">${p.zScore > 0 ? '+' : ''}${p.zScore.toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateKPICards() {
+      if (advancedStats.length === 0) return;
+
+      const topMVP = [...advancedStats].sort((a, b) => b.oprComposite - a.oprComposite)[0];
+      if (topMVP && topMVP.gp > 0) {
+        document.getElementById('kpi-mvp-player').textContent = topMVP.name;
+        document.getElementById('kpi-mvp-val').textContent = (topMVP.oprComposite > 0 ? '+' : '') + topMVP.oprComposite.toFixed(2);
+        document.getElementById('kpi-mvp-card').onclick = () => openPlayerModal(topMVP.id);
+      }
+
+      const topRel = [...advancedStats].sort((a, b) => b.relPM - a.relPM)[0];
+      if (topRel && topRel.gp > 0) {
+        document.getElementById('kpi-relpm-player').textContent = topRel.name;
+        document.getElementById('kpi-relpm-val').textContent = (topRel.relPM > 0 ? '+' : '') + topRel.relPM.toFixed(1);
+        document.getElementById('kpi-relpm-card').onclick = () => openPlayerModal(topRel.id);
+      }
+
+      const topRAPM = [...advancedStats].sort((a, b) => b.rapm - a.rapm)[0];
+      if (topRAPM && topRAPM.gp > 0) {
+        document.getElementById('kpi-rapm-player').textContent = topRAPM.name;
+        document.getElementById('kpi-rapm-val').textContent = (topRAPM.rapm > 0 ? '+' : '') + topRAPM.rapm.toFixed(2);
+        document.getElementById('kpi-rapm-card').onclick = () => openPlayerModal(topRAPM.id);
+      }
+
+      const topMWC = [...advancedStats].sort((a, b) => b.mwc - a.mwc)[0];
+      if (topMWC && topMWC.gp > 0) {
+        document.getElementById('kpi-mwc-player').textContent = topMWC.name;
+        document.getElementById('kpi-mwc-val').textContent = (topMWC.mwc > 0 ? '+' : '') + topMWC.mwc.toFixed(2);
+        document.getElementById('kpi-mwc-card').onclick = () => openPlayerModal(topMWC.id);
+      }
+
+      const topWPA = [...advancedStats].sort((a, b) => b.wpa - a.wpa)[0];
+      if (topWPA && topWPA.gp > 0) {
+        document.getElementById('kpi-wpa-player').textContent = topWPA.name;
+        document.getElementById('kpi-wpa-val').textContent = (topWPA.wpa > 0 ? '+' : '') + topWPA.wpa.toFixed(2);
+        document.getElementById('kpi-wpa-card').onclick = () => openPlayerModal(topWPA.id);
+      }
+
+      const topGCR = [...advancedStats].sort((a, b) => b.gcrPct - a.gcrPct)[0];
+      if (topGCR && topGCR.gp > 0) {
+        document.getElementById('kpi-gcr-player').textContent = topGCR.name;
+        document.getElementById('kpi-gcr-val').textContent = topGCR.gcrPct.toFixed(1) + '%';
+        document.getElementById('kpi-gcr-card').onclick = () => openPlayerModal(topGCR.id);
+      }
+
+      const activeDef = advancedStats.filter(p => p.gp > 0);
+      if (activeDef.length > 0) {
+        const topDef = [...activeDef].sort((a, b) => b.gae - a.gae)[0];
+        document.getElementById('kpi-def-player').textContent = topDef.name;
+        document.getElementById('kpi-gae-val').textContent = (topDef.gae > 0 ? '+' : '') + topDef.gae.toFixed(2) + ' GAE';
+        document.getElementById('kpi-dqi-pct').textContent = `${topDef.dqiPct.toFixed(0)}% DQI`;
+        document.getElementById('kpi-def-card').onclick = () => openPlayerModal(topDef.id);
+      }
+
+      const topClutch = [...advancedStats].sort((a, b) => b.clutchFactor - a.clutchFactor)[0];
+      if (topClutch && topClutch.gp > 0) {
+        document.getElementById('kpi-clutch-player').textContent = topClutch.name;
+        document.getElementById('kpi-clutch-val').textContent = (topClutch.clutchFactor > 0 ? '+' : '') + topClutch.clutchFactor.toFixed(2);
+        document.getElementById('kpi-clutch-card').onclick = () => openPlayerModal(topClutch.id);
+      }
+    }
+
+    // ==================== TAB 5: TACTICAL BOARD & MAX-REGRET OPTIMIZATION ====================
+    function solveRegretFormationAssignment(formationKey) {
+      const fConfig = TACTICAL_FORMATIONS[formationKey];
+      if (!fConfig || advancedStats.length === 0) {
+        return { assignment: [], teamFitPct: 0 };
+      }
+
+      const remainingSlots = fConfig.rows.flat().map((slot, idx) => ({
+        ...slot,
+        slotId: idx
+      }));
+
+      const availablePlayers = [...advancedStats];
+      const finalAssignments = [];
+
+      while (remainingSlots.length > 0 && availablePlayers.length > 0) {
+        let highestRegret = -Infinity;
+        let bestSlotIdx = -1;
+        let chosenPlayerIdx = -1;
+
+        for (let sIdx = 0; sIdx < remainingSlots.length; sIdx++) {
+          const slot = remainingSlots[sIdx];
+
+          const candidates = availablePlayers
+            .map((p, pIdx) => ({ pIdx, score: p.positionFits[slot.pos] || 50 }))
+            .sort((a, b) => b.score - a.score);
+
+          const bestScore = candidates[0].score;
+          const secondScore = candidates.length > 1 ? candidates[1].score : (bestScore - 15);
+          const regret = bestScore - secondScore;
+
+          if (regret > highestRegret) {
+            highestRegret = regret;
+            bestSlotIdx = sIdx;
+            chosenPlayerIdx = candidates[0].pIdx;
+          }
+        }
+
+        const lockedSlot = remainingSlots.splice(bestSlotIdx, 1)[0];
+        const lockedPlayer = availablePlayers.splice(chosenPlayerIdx, 1)[0];
+
+        finalAssignments.push({
+          slot: lockedSlot,
+          player: lockedPlayer,
+          score: lockedPlayer.positionFits[lockedSlot.pos] || 50
+        });
+      }
+
+      finalAssignments.sort((a, b) => a.slot.slotId - b.slot.slotId);
+
+      const totalFit = finalAssignments.reduce((sum, item) => sum + item.score, 0);
+      const teamFitPct = Math.round(totalFit / (finalAssignments.length || 1));
+
+      return { assignment: finalAssignments, teamFitPct };
+    }
+
+    function renderTacticalPitchBoard() {
+      const activeFormationKey = document.getElementById('tactical-formation').value;
+      const fConfig = TACTICAL_FORMATIONS[activeFormationKey] || TACTICAL_FORMATIONS['4-2-3-1'];
+      const pitchContainer = document.getElementById('pitch-slots-container');
+      pitchContainer.innerHTML = '';
+
+      const { assignment, teamFitPct } = solveRegretFormationAssignment(activeFormationKey);
+
+      document.getElementById('active-formation-fit-pct').textContent = `${teamFitPct}%`;
+      document.getElementById('team-fit-name').textContent = `${fConfig.name} Compatibility`;
+
+      renderFormationComparisonCards(activeFormationKey);
+
+      let slotIndex = 0;
+      fConfig.rows.forEach(rowGroup => {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = "flex justify-around items-start w-full px-0 sm:px-2 gap-1";
+
+        rowGroup.forEach(slot => {
+          const assigned = assignment[slotIndex++];
+          const player = assigned ? assigned.player : null;
+          const score = assigned ? assigned.score : 50;
+
+          const slotBtn = document.createElement('button');
+          slotBtn.className = "flex flex-col items-center min-w-0 group cursor-pointer transition transform md:hover:scale-105";
+          slotBtn.onclick = () => { selectRadarPlayer(player ? player.id : null); scrollRadarIntoViewOnMobile(); };
+
+          slotBtn.innerHTML = `
+            <div class="w-10 h-10 rounded-full bg-slate-900/90 border-2 ${score >= 75 ? 'border-emerald-400' : 'border-amber-400'} group-hover:border-sky-400 flex items-center justify-center text-white font-bold text-xs shadow-lg group-hover:shadow-sky-400/40 transition">
+              ${player ? player.id : '#'}
+            </div>
+            <div class="mt-1 px-2 py-0.5 rounded bg-slate-900/90 border border-slate-700 text-[10px] font-semibold text-slate-200 truncate max-w-[58px] sm:max-w-[85px] shadow">
+              ${player ? escapeHtml(player.name) : 'Vacant'}
+            </div>
+            <span class="text-[9px] uppercase font-bold text-amber-400 tracking-wider">${slot.label}</span>
+          `;
+          rowDiv.appendChild(slotBtn);
+        });
+        pitchContainer.appendChild(rowDiv);
+      });
+
+      renderSquadDepthChartCards();
+
+      if (!selectedRadarPlayerId && advancedStats.length > 0) {
+        selectRadarPlayer(advancedStats[0].id);
+      } else if (selectedRadarPlayerId) {
+        selectRadarPlayer(selectedRadarPlayerId);
+      }
+    }
+
+    function scrollRadarIntoViewOnMobile() {
+      if (window.matchMedia('(max-width: 1023px)').matches) {
+        const el = document.getElementById('radar-panel');
+        if (el) {
+          const headerH = (document.querySelector('header') || {}).offsetHeight || 0;
+          const top = el.getBoundingClientRect().top + window.scrollY - headerH - 8;
+          window.scrollTo({ top, behavior: 'smooth' });
+        }
+      }
+    }
+
+    function renderFormationComparisonCards(activeKey) {
+      const container = document.getElementById('formation-comparison-grid');
+      container.innerHTML = '';
+
+      let bestFitScore = -1;
+      let bestFitKey = '';
+
+      const comparisonResults = Object.keys(TACTICAL_FORMATIONS).map(key => {
+        const { teamFitPct } = solveRegretFormationAssignment(key);
+        if (teamFitPct > bestFitScore) {
+          bestFitScore = teamFitPct;
+          bestFitKey = key;
+        }
+        return { key, fit: teamFitPct, config: TACTICAL_FORMATIONS[key] };
+      });
+
+      document.getElementById('best-team-fit-tag').textContent = `${bestFitKey} (${bestFitScore}%)`;
+
+      comparisonResults.forEach(item => {
+        const isActive = item.key === activeKey;
+        const card = document.createElement('div');
+        card.className = `p-3 rounded-xl border transition cursor-pointer flex flex-col justify-between ${isActive ? 'bg-sky-500/10 border-sky-400 shadow-md shadow-sky-500/10' : 'bg-slate-900/70 border-slate-800 hover:border-slate-700'}`;
+        card.onclick = () => {
+          document.getElementById('tactical-formation').value = item.key;
+          renderTacticalPitchBoard();
+        };
+
+        card.innerHTML = `
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="font-bold text-xs ${isActive ? 'text-sky-300' : 'text-slate-200'}">${item.key}</span>
+            <span class="font-mono text-xs font-black ${item.fit >= 80 ? 'text-emerald-400' : 'text-amber-400'}">${item.fit}%</span>
+          </div>
+          <div class="w-full bg-slate-950 rounded-full h-1.5 overflow-hidden border border-slate-800 mb-1.5">
+            <div class="h-full rounded-full ${isActive ? 'bg-sky-400' : 'bg-slate-600'}" style="width: ${item.fit}%"></div>
+          </div>
+          <span class="text-[9px] text-slate-400 truncate block">${item.config.name.replace(/.*\((.*)\)/, '$1')}</span>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function renderSquadDepthChartCards() {
+      const container = document.getElementById('depth-chart-grid');
+      container.innerHTML = '';
+
+      const posKeys = ['CB', 'FB', 'CDM', 'CM', 'CAM', 'Wing', 'ST'];
+      posKeys.forEach(pos => {
+        const sortedForPos = [...advancedStats].sort((a, b) => (b.positionFits[pos] || 0) - (a.positionFits[pos] || 0)).slice(0, 5);
+
+        const col = document.createElement('div');
+        col.className = "bg-slate-900/90 border border-slate-700/80 rounded-xl p-3 flex flex-col justify-between space-y-2";
+        col.innerHTML = `
+          <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
+            <span class="font-bold text-sky-400">${pos}</span>
+            <span class="text-[10px] text-slate-500 uppercase">Top 5</span>
+          </div>
+          <div class="space-y-1.5" id="depth-list-${pos}"></div>
+        `;
+        container.appendChild(col);
+
+        const listDiv = col.querySelector(`#depth-list-${pos}`);
+        sortedForPos.forEach((p, idx) => {
+          const fitScore = p.positionFits[pos] || 50;
+          const isPrimary = p.primaryPosition === pos;
+
+          const itemBtn = document.createElement('button');
+          itemBtn.className = `w-full flex items-center justify-between p-1.5 rounded text-left transition hover:bg-slate-800 ${isPrimary ? 'bg-sky-500/10 border border-sky-500/30' : 'text-slate-300'}`;
+          itemBtn.onclick = () => { selectRadarPlayer(p.id); scrollRadarIntoViewOnMobile(); };
+
+          itemBtn.innerHTML = `
+            <div class="flex items-center gap-1.5 truncate">
+              <span class="text-[10px] text-slate-500 font-bold">${idx + 1}.</span>
+              <span class="truncate font-medium text-[11px] text-white">${escapeHtml(p.name)}</span>
+            </div>
+            <span class="font-mono text-[10px] font-bold ${fitScore >= 75 ? 'text-emerald-400' : 'text-amber-400'}">${fitScore}%</span>
+          `;
+          listDiv.appendChild(itemBtn);
+        });
+      });
+    }
+
+    function selectRadarPlayer(playerId) {
+      if (!playerId) return;
+      selectedRadarPlayerId = playerId;
+      const p = advancedStats.find(x => x.id === playerId);
+      if (!p) return;
+
+      document.getElementById('radar-player-name').textContent = p.name;
+      document.getElementById('radar-player-sub').textContent = `ID #${p.id} • ${p.gp} Matches Played • PPG: ${p.ppg.toFixed(2)}`;
+      document.getElementById('radar-primary-badge').textContent = `Role: ${p.primaryPosition} (${p.primaryScore}%)`;
+
+      renderSVGRadar(p.radar);
+
+      const fitContainer = document.getElementById('radar-fit-bars');
+      fitContainer.innerHTML = '';
+      const sortedFits = Object.entries(p.positionFits).sort((a, b) => b[1] - a[1]);
+
+      sortedFits.forEach(([pos, score]) => {
+        const isPrim = pos === p.primaryPosition;
+        const isSec = pos === p.secondaryPosition;
+        const barDiv = document.createElement('div');
+        barDiv.className = "flex items-center gap-2";
+
+        barDiv.innerHTML = `
+          <span class="w-10 font-bold ${isPrim ? 'text-sky-400' : isSec ? 'text-amber-400' : 'text-slate-400'}">${pos}</span>
+          <div class="flex-grow bg-slate-950 rounded-full h-2 overflow-hidden border border-slate-800">
+            <div class="h-full rounded-full ${isPrim ? 'bg-sky-400' : isSec ? 'bg-amber-400' : 'bg-slate-600'}" style="width: ${score}%"></div>
+          </div>
+          <span class="w-8 text-right font-bold text-slate-300 text-[10px]">${score}%</span>
+        `;
+        fitContainer.appendChild(barDiv);
+      });
+
+      let scoutingNote = `${p.name} projects as a primary <b>${p.primaryPosition}</b> (${p.primaryScore}% fit)`;
+      if (p.secondaryPosition) scoutingNote += ` with hybrid versatility at <b>${p.secondaryPosition}</b>. `;
+      if (p.radar.lift >= 70) scoutingNote += `Elevates lineup performance (+${p.relPM.toFixed(1)} Rel ±). `;
+      if (p.radar.defense >= 70) scoutingNote += `Provides lockdown defensive protection. `;
+      if (p.radar.attack >= 70) scoutingNote += `Consistently initiates multi-goal offensive scoring. `;
+      if (p.radar.clutch >= 70) scoutingNote += `Decisive closer in tight 1-goal games.`;
+
+      document.getElementById('radar-scouting-note').innerHTML = scoutingNote;
+    }
+
+    function renderSVGRadar(rVals) {
+      const svg = document.getElementById('tactical-radar-svg');
+      svg.innerHTML = '';
+      window.__lastRadarVals = rVals;
+      const light = isLightTheme();
+      const C = light
+        ? { ringOuter: '#94a3b8', ring: '#cbd5e1', spoke: '#cbd5e1', label: '#334155', fill: 'rgba(2, 132, 199, 0.28)', stroke: '#0284c7', dot: '#d97706' }
+        : { ringOuter: '#475569', ring: '#334155', spoke: '#334155', label: '#94a3b8', fill: 'rgba(56, 189, 248, 0.35)', stroke: '#38bdf8', dot: '#f59e0b' };
+
+      const cx = 125, cy = 125, maxR = 85;
+      const axes = [
+        { label: 'Attack', val: rVals.attack },
+        { label: 'Defense', val: rVals.defense },
+        { label: 'Lift (Rel ±)', val: rVals.lift },
+        { label: 'RAPM Impact', val: rVals.impact },
+        { label: 'Clutch', val: rVals.clutch }
+      ];
+
+      [0.25, 0.5, 0.75, 1.0].forEach(level => {
+        let points = [];
+        for (let i = 0; i < 5; i++) {
+          const angle = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+          const x = cx + maxR * level * Math.cos(angle);
+          const y = cy + maxR * level * Math.sin(angle);
+          points.push(`${x.toFixed(1)},${y.toFixed(1)}`);
+        }
+        const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        poly.setAttribute('points', points.join(' '));
+        poly.setAttribute('fill', 'none');
+        poly.setAttribute('stroke', level === 1.0 ? C.ringOuter : C.ring);
+        poly.setAttribute('stroke-width', level === 1.0 ? '1.5' : '1');
+        svg.appendChild(poly);
+      });
+
+      let playerPoints = [];
+      axes.forEach((axis, i) => {
+        const angle = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+        const lineX = cx + maxR * Math.cos(angle);
+        const lineY = cy + maxR * Math.sin(angle);
+
+        const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        line.setAttribute('x1', cx); line.setAttribute('y1', cy);
+        line.setAttribute('x2', lineX); line.setAttribute('y2', lineY);
+        line.setAttribute('stroke', C.spoke);
+        line.setAttribute('stroke-width', '1');
+        svg.appendChild(line);
+
+        const pR = maxR * (axis.val / 100);
+        const px = cx + pR * Math.cos(angle);
+        const py = cy + pR * Math.sin(angle);
+        playerPoints.push(`${px.toFixed(1)},${py.toFixed(1)}`);
+
+        const labelX = cx + (maxR + 18) * Math.cos(angle);
+        const labelY = cy + (maxR + 14) * Math.sin(angle);
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', labelX);
+        text.setAttribute('y', labelY);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('alignment-baseline', 'middle');
+        text.setAttribute('fill', C.label);
+        text.setAttribute('font-size', '9');
+        text.setAttribute('font-weight', 'bold');
+        text.textContent = `${axis.label} (${axis.val})`;
+        svg.appendChild(text);
+      });
+
+      const playerPoly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+      playerPoly.setAttribute('points', playerPoints.join(' '));
+      playerPoly.setAttribute('fill', C.fill);
+      playerPoly.setAttribute('stroke', C.stroke);
+      playerPoly.setAttribute('stroke-width', '2');
+      svg.appendChild(playerPoly);
+
+      axes.forEach((axis, i) => {
+        const angle = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+        const pR = maxR * (axis.val / 100);
+        const px = cx + pR * Math.cos(angle);
+        const py = cy + pR * Math.sin(angle);
+
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', px);
+        circle.setAttribute('cy', py);
+        circle.setAttribute('r', '3.5');
+        circle.setAttribute('fill', C.dot);
+        svg.appendChild(circle);
+      });
+    }
+
+    // ==================== THEME (LIGHT / DARK) ====================
+    const STORAGE_KEY_THEME = "sss_theme";
+
+    function isLightTheme() {
+      return document.documentElement.classList.contains('light');
+    }
+
+    function applyTheme(light, persist) {
+      document.documentElement.classList.toggle('light', light);
+
+      const icon = document.getElementById('theme-toggle-icon');
+      const btn = document.getElementById('theme-toggle');
+      const label = light ? 'Switch to dark mode' : 'Switch to light mode';
+      if (icon) icon.className = 'fa-solid ' + (light ? 'fa-moon' : 'fa-sun');
+      if (btn) { btn.setAttribute('aria-label', label); btn.title = label; }
+
+      const meta = document.getElementById('meta-theme-color');
+      if (meta) meta.setAttribute('content', light ? '#ffffff' : '#1e293b');
+
+      if (persist) {
+        try { localStorage.setItem(STORAGE_KEY_THEME, light ? 'light' : 'dark'); } catch (e) {}
+      }
+
+      // The radar chart is drawn with SVG attributes, so redraw it in the new colors
+      if (window.__lastRadarVals) renderSVGRadar(window.__lastRadarVals);
+    }
+
+    function toggleTheme() {
+      applyTheme(!isLightTheme(), true);
+    }
+
+    // ==================== SAVE STATE & STORAGE ENGINE ====================
+    const STORAGE_KEY_SLOTS = "sss_saved_slots";
+    const STORAGE_KEY_AUTOSAVE = "sss_autosave";
+    const STORAGE_KEY_TAB = "sss_active_tab";
+
+    // ---------- Autosave: keeps the current tournament on this device automatically ----------
+    let autosaveReady = false;      // stays false until startup/restore has finished
+    let autosaveTimer = null;
+    let lastAutosaveAt = null;
+    let autosaveFailed = false;
+
+    function scheduleAutosave() {
+      if (!autosaveReady) return;
+      clearTimeout(autosaveTimer);
+      autosaveTimer = setTimeout(autosaveNow, 300);
+    }
+
+    function autosaveNow() {
+      clearTimeout(autosaveTimer);
+      if (!autosaveReady || window.__skipAutosave) return;
+      try {
+        localStorage.setItem(STORAGE_KEY_AUTOSAVE, JSON.stringify(getTournamentPayload("Autosave")));
+        lastAutosaveAt = new Date();
+        autosaveFailed = false;
+      } catch (e) {
+        autosaveFailed = true;   // private browsing or storage full
+      }
+    }
+
+    function formatClock(d) {
+      return d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+    }
+
+    function updateAutosaveStatus() {
+      const el = document.getElementById('autosave-status');
+      if (!el) return;
+      if (autosaveFailed) {
+        el.textContent = "Autosave isn't available in this browser mode (private browsing or full storage). Use Download File or Copy JSON to back up your tournament.";
+      } else if (lastAutosaveAt) {
+        el.textContent = `Autosave is on. Your tournament was last saved on this device at ${formatClock(lastAutosaveAt)} and will reopen where you left off.`;
+      } else {
+        el.textContent = "Autosave is on. Your tournament saves on this device automatically as you make changes.";
+      }
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      if (!t) return;
+      t.textContent = msg;
+      t.classList.remove('hidden');
+      clearTimeout(window.__toastTimer);
+      window.__toastTimer = setTimeout(() => t.classList.add('hidden'), 5000);
+    }
+
+    function restoreAutosave() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY_AUTOSAVE);
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        if (!applyTournamentPayload(parsed)) return false;
+
+        const hasSchedule = Array.isArray(parsed.schedule) && parsed.schedule.length > 0;
+        if (parsed.timestamp) lastAutosaveAt = new Date(parsed.timestamp);
+        if (hasSchedule) {
+          let tab = null;
+          try { tab = localStorage.getItem(STORAGE_KEY_TAB); } catch (e) {}
+          if (['setup', 'matches', 'standings', 'analytics', 'tactical'].includes(tab)) switchTab(tab);
+          showToast(lastAutosaveAt ? `Restored your tournament (saved ${formatClock(lastAutosaveAt)})` : 'Restored your tournament');
+        }
+        return true;
+      } catch (err) {
+        console.error("Could not restore autosave:", err);
+        return false;
+      }
+    }
+
+    function startNewTournament() {
+      if (!confirm("Start a new tournament? The current roster, schedule and scores will be cleared from this device's autosave.\n\nNamed save slots and downloaded files are not affected.")) return;
+      window.__skipAutosave = true;
+      try {
+        localStorage.removeItem(STORAGE_KEY_AUTOSAVE);
+        localStorage.removeItem(STORAGE_KEY_TAB);
+      } catch (e) {}
+      location.reload();
+    }
+
+    // Save right away when the page is backgrounded or closed (switching apps on a phone)
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') autosaveNow(); });
+    window.addEventListener('pagehide', autosaveNow);
+
+    function getTournamentPayload(name = "Saved Session") {
+      return {
+        name: name,
+        timestamp: new Date().toISOString(),
+        config: {
+          format: document.getElementById('cfg-format').value,
+          players: parseInt(document.getElementById('cfg-players').value),
+          fields: parseInt(document.getElementById('cfg-fields').value),
+          targetGames: parseInt(document.getElementById('cfg-target-games').value)
+        },
+        players: players,
+        schedule: schedule,
+        rounds: rounds
+      };
+    }
+
+    function applyTournamentPayload(data) {
+      if (!data || !data.players || !Array.isArray(data.players) || data.players.length === 0) {
+        return false;
+      }
+      try {
+        if (data.config) {
+          document.getElementById('cfg-format').value = data.config.format || "3";
+          document.getElementById('cfg-players').value = data.config.players || 20;
+          document.getElementById('cfg-fields').value = data.config.fields || 2;
+          document.getElementById('cfg-target-games').value = data.config.targetGames || 6;
+        }
+
+        players = data.players;
+        schedule = data.schedule || [];
+        rounds = data.rounds || [];
+
+        renderRosterInputs();
+        recalculateTournamentMath();
+        renderMatches();
+        recalculateAllTables();
+        return true;
+      } catch (err) {
+        console.error("Failed to load tournament data:", err);
+        return false;
+      }
+    }
+
+    function openSaveModal() {
+      renderSaveSlots();
+      updateAutosaveStatus();
+      document.getElementById('save-modal').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeSaveModal() {
+      document.getElementById('save-modal').classList.add('hidden');
+      unlockBodyScrollIfNoModal();
+    }
+
+    function unlockBodyScrollIfNoModal() {
+      const open = ['save-modal', 'player-modal'].some(id => !document.getElementById(id).classList.contains('hidden'));
+      if (!open) document.body.style.overflow = '';
+    }
+
+    function saveCurrentToSlot() {
+      const input = document.getElementById('save-slot-name');
+      const slotName = input.value.trim() || `Session ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`;
+      
+      const payload = getTournamentPayload(slotName);
+      let slots = JSON.parse(localStorage.getItem(STORAGE_KEY_SLOTS) || "[]");
+      
+      const existingIdx = slots.findIndex(s => s.name === slotName);
+      if (existingIdx >= 0) {
+        slots[existingIdx] = payload;
+      } else {
+        slots.unshift(payload);
+      }
+
+      localStorage.setItem(STORAGE_KEY_SLOTS, JSON.stringify(slots));
+      input.value = '';
+      renderSaveSlots();
+    }
+
+    function renderSaveSlots() {
+      const container = document.getElementById('save-slots-list');
+      container.innerHTML = '';
+
+      let slots = JSON.parse(localStorage.getItem(STORAGE_KEY_SLOTS) || "[]");
+
+      if (slots.length === 0) {
+        container.innerHTML = `<div class="p-3 text-center text-slate-500 text-xs">No saved slots found on this device.</div>`;
+        return;
+      }
+
+      slots.forEach((s, idx) => {
+        const item = document.createElement('div');
+        item.className = "flex items-center justify-between gap-2 p-2.5 rounded-lg bg-slate-900 border border-slate-700/80 hover:border-slate-600 transition";
+        const dateStr = s.timestamp ? new Date(s.timestamp).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Unknown date';
+
+        item.innerHTML = `
+          <div class="min-w-0">
+            <div class="font-bold text-white flex items-center gap-1.5">
+              <span class="truncate">${escapeHtml(s.name)}</span>
+            </div>
+            <div class="text-[10px] text-slate-400">
+              ${dateStr} &bull; ${s.players?.length || 20} Players &bull; ${s.schedule?.length || 0} Matches
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button onclick="loadSlotByIndex(${idx})" class="px-3 py-2 sm:px-2.5 sm:py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded text-xs transition">
+              Load
+            </button>
+            <button onclick="deleteSlotByIndex(${idx})" class="w-9 h-9 sm:w-6 sm:h-6 rounded bg-slate-800 hover:bg-rose-900/60 text-slate-400 hover:text-rose-300 flex items-center justify-center transition" title="Delete Slot">
+              <i class="fa-solid fa-trash-can text-[10px]"></i>
+            </button>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function loadSlotByIndex(index) {
+      let slots = JSON.parse(localStorage.getItem(STORAGE_KEY_SLOTS) || "[]");
+      const target = slots[index];
+      if (target) {
+        if (confirm(`Load "${target.name}"? Current tournament progress will be replaced.`)) {
+          applyTournamentPayload(target);
+          closeSaveModal();
+        }
+      }
+    }
+
+    function deleteSlotByIndex(index) {
+      let slots = JSON.parse(localStorage.getItem(STORAGE_KEY_SLOTS) || "[]");
+      if (index >= 0 && index < slots.length) {
+        if (confirm(`Delete saved slot "${slots[index].name}"?`)) {
+          slots.splice(index, 1);
+          localStorage.setItem(STORAGE_KEY_SLOTS, JSON.stringify(slots));
+          renderSaveSlots();
+        }
+      }
+    }
+
+    function downloadTournamentJSON() {
+      const payload = getTournamentPayload("SSS_Tournament_Session");
+      saveTextAsFile(JSON.stringify(payload, null, 2), `sss_tournament_${new Date().toISOString().slice(0,10)}.json`, "application/json");
+    }
+
+    function saveTextAsFile(text, filename, mime) {
+      const blob = new Blob([text], { type: mime });
+      const file = new File([blob], filename, { type: mime });
+      // Phones: use the native share sheet when available (Save to Files, AirDrop, Messages...)
+      if (navigator.canShare && navigator.canShare({ files: [file] }) && /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+        navigator.share({ files: [file], title: filename }).catch(() => {});
+        return;
+      }
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+
+    function copyTournamentJSON() {
+      const text = JSON.stringify(getTournamentPayload("SSS_Tournament_Session"), null, 2);
+      const done = () => alert("Tournament JSON copied. Paste it into the box above on another device and tap Load.");
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+      } else {
+        fallbackCopy(text, done);
+      }
+    }
+
+    function fallbackCopy(text, done) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+      try { document.execCommand('copy'); done(); } catch (e) { alert("Copy failed. Use Download File instead."); }
+      ta.remove();
+    }
+
+    function importTournamentJSON(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const parsed = JSON.parse(e.target.result);
+          if (applyTournamentPayload(parsed)) {
+            closeSaveModal();
+            alert("Tournament file loaded successfully!");
+          } else {
+            alert("Invalid tournament file structure.");
+          }
+        } catch (err) {
+          alert("Error parsing file: " + err.message);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // Interactive Player Match Log Modal
+    function openPlayerModal(playerId) {
+      const p = players.find(x => x.id === playerId);
+      if (!p) return;
+
+      const pStat = advancedStats.find(x => x.id === playerId) || {
+        gp: 0, w: 0, d: 0, l: 0, pts: 0, gd: 0, ppg: 0, gdAvg: 0, oprComposite: 0, relPM: 0, rapm: 0
+      };
+
+      document.getElementById('modal-player-avatar').textContent = p.id;
+      document.getElementById('modal-player-name').textContent = p.name;
+      document.getElementById('modal-player-id').textContent = `Player #${p.id}`;
+
+      document.getElementById('modal-stat-record').textContent = `${pStat.w}-${pStat.d}-${pStat.l}`;
+      document.getElementById('modal-stat-ppg').textContent = pStat.ppg.toFixed(2);
+      document.getElementById('modal-stat-gdg').textContent = (pStat.gdAvg > 0 ? '+' : '') + pStat.gdAvg.toFixed(2);
+      document.getElementById('modal-stat-comp').textContent = (pStat.oprComposite > 0 ? '+' : '') + pStat.oprComposite.toFixed(2);
+      document.getElementById('modal-stat-relpm').textContent = (pStat.relPM > 0 ? '+' : '') + pStat.relPM.toFixed(1);
+      document.getElementById('modal-stat-rapm').textContent = (pStat.rapm > 0 ? '+' : '') + pStat.rapm.toFixed(2);
+
+      const playerMatches = schedule.filter(m => 
+        m.teamA.players.includes(playerId) || m.teamB.players.includes(playerId)
+      );
+
+      const container = document.getElementById('modal-matches-container');
+      container.innerHTML = '';
+
+      if (playerMatches.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-8 text-slate-500 text-xs">
+            <i class="fa-solid fa-calendar-xmark text-2xl mb-2 text-slate-600 block"></i>
+            No matches scheduled or recorded for this player yet.
+          </div>
+        `;
+      } else {
+        playerMatches.forEach(m => {
+          const isTeamA = m.teamA.players.includes(playerId);
+          const myTeam = isTeamA ? m.teamA : m.teamB;
+          const oppTeam = isTeamA ? m.teamB : m.teamA;
+          const myScore = isTeamA ? m.scoreA : m.scoreB;
+          const oppScore = isTeamA ? m.scoreB : m.scoreA;
+
+          const teammates = myTeam.players.filter(id => id !== playerId).map(id => getPlayerName(id));
+          const opponents = oppTeam.players.map(id => getPlayerName(id));
+
+          let resultBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-slate-800 text-slate-400 border border-slate-700">Scheduled</span>`;
+          let resultBorder = 'border-slate-700/70';
+
+          if (m.completed) {
+            const gd = myScore - oppScore;
+            if (gd > 0) {
+              resultBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">WIN (+${gd})</span>`;
+              resultBorder = 'border-emerald-500/30';
+            } else if (gd === 0) {
+              resultBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40">DRAW (0)</span>`;
+              resultBorder = 'border-amber-500/30';
+            } else {
+              resultBadge = `<span class="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40">LOSS (${gd})</span>`;
+              resultBorder = 'border-rose-500/30';
+            }
+          }
+
+          const card = document.createElement('div');
+          card.className = `bg-slate-900/90 border ${resultBorder} rounded-xl p-3.5 space-y-2 text-xs`;
+          card.innerHTML = `
+            <div class="flex flex-wrap items-center justify-between gap-2 pb-2 border-b border-slate-800">
+              <div class="flex items-center gap-2">
+                <span class="font-bold text-amber-400 uppercase tracking-wide">Round ${m.round}</span>
+                <span class="text-slate-500">&bull;</span>
+                <span class="text-slate-400">Field ${m.field}</span>
+                <span class="text-slate-600 text-[10px]">#${m.id}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="font-mono font-bold text-sm text-white">
+                  ${m.completed ? `${myScore} -${oppScore}` : '- : -'}
+                </span>
+                ${resultBadge}
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div class="bg-slate-800/60 p-2 rounded-lg border border-slate-700/50">
+                <span class="text-[10px] uppercase font-bold text-emerald-400 block mb-0.5">
+                  <i class="fa-solid fa-users mr-1"></i> Teammates (${isTeamA ? 'Team A' : 'Team B'}):
+                </span>
+                <span class="text-slate-300 font-medium">${escapeHtml(teammates.join(', ') || 'Solo')}</span>
+              </div>
+              <div class="bg-slate-800/60 p-2 rounded-lg border border-slate-700/50">
+                <span class="text-[10px] uppercase font-bold text-sky-400 block mb-0.5">
+                  <i class="fa-solid fa-shield mr-1"></i> Opponents (${isTeamA ? 'Team B' : 'Team A'}):
+                </span>
+                <span class="text-slate-300 font-medium">${escapeHtml(opponents.join(', '))}</span>
+              </div>
+            </div>
+          `;
+          container.appendChild(card);
+        });
+      }
+
+      const byeRounds = [];
+      rounds.forEach(rnd => {
+        if (rnd.restingIds && rnd.restingIds.includes(playerId)) {
+          byeRounds.push(`Round ${rnd.roundNum}`);
+        }
+      });
+      document.getElementById('modal-bye-rounds').textContent = byeRounds.length > 0 ? byeRounds.join(', ') : 'None (Active all rounds)';
+
+      document.getElementById('player-modal').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closePlayerModal() {
+      document.getElementById('player-modal').classList.add('hidden');
+      unlockBodyScrollIfNoModal();
+    }
+
+    window.addEventListener('click', (e) => {
+      const pModal = document.getElementById('player-modal');
+      const sModal = document.getElementById('save-modal');
+      if (pModal && e.target === pModal) closePlayerModal();
+      if (sModal && e.target === sModal) closeSaveModal();
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closePlayerModal();
+        closeSaveModal();
+      }
+    });
+
+    function loadFromPastedJSON() {
+      const pasteBox = document.getElementById('import-json-paste');
+      if (!pasteBox) {
+        alert("Error: Input box element not found.");
+        return;
+      }
+      const raw = pasteBox.value.trim();
+      if (!raw) {
+        alert("Please paste the JSON text into the box first.");
+        return;
+      }
+      try {
+        const parsed = JSON.parse(raw);
+        if (applyTournamentPayload(parsed)) {
+          let slots = JSON.parse(localStorage.getItem(STORAGE_KEY_SLOTS) || "[]");
+          slots = slots.filter(s => s.name !== parsed.name);
+          slots.unshift(parsed);
+          localStorage.setItem(STORAGE_KEY_SLOTS, JSON.stringify(slots));
+          pasteBox.value = '';
+          closeSaveModal();
+          alert("Tournament data loaded and saved successfully!");
+        } else {
+          alert("Invalid tournament structure in pasted data.");
+        }
+      } catch (err) {
+        alert("JSON Parse Error: " + err.message);
+      }
+    }
+
+    function exportTableCSV(mode = 'standard') {
+      let csvContent = "data:text/csv;charset=utf-8,";
+
+      if (mode === 'standard') {
+        csvContent += "Rank,Player,GP,Wins,Ties,Losses,PPG,GD_per_Game,GF_per_Game,GA_per_Game,Total_PTS,Total_GD,Win%\n";
+        standardStats.forEach((p, idx) => {
+          csvContent += `${idx + 1},"${p.name}",${p.gp},${p.w},${p.d},${p.l},${p.ppg.toFixed(2)},${p.gdAvg.toFixed(2)},${p.gfAvg.toFixed(2)},${p.gaAvg.toFixed(2)},${p.pts},${p.gd},${p.winPct.toFixed(1)}%\n`;
+        });
+      } else {
+        csvContent += "Rank,Player,GP,OPR_Composite,Rel_PM,RAPM,MWC,WPA,GCR_Pct,GAE,OPR_Pct,DQI_Pct,Clutch_GD,Z_Score\n";
+        advancedStats.forEach((p, idx) => {
+          csvContent += `${idx + 1},"${p.name}",${p.gp},${p.oprComposite.toFixed(2)},${p.relPM.toFixed(1)},${p.rapm.toFixed(2)},${p.mwc.toFixed(2)},${p.wpa.toFixed(2)},${p.gcrPct.toFixed(1)}%,${p.gae.toFixed(2)},${p.oprPct.toFixed(1)}%,${p.dqiPct.toFixed(1)}%,${p.clutchFactor.toFixed(2)},${p.zScore.toFixed(2)}\n`;
+        });
+      }
+
+      saveTextAsFile(csvContent.replace("data:text/csv;charset=utf-8,", ""), `sss_${mode}_analytics.csv`, "text/csv;charset=utf-8");
+    }
+
+    function switchTab(tabId) {
+      ['setup', 'matches', 'standings', 'analytics', 'tactical'].forEach(id => {
+        document.getElementById(`tab-${id}`).classList.add('hidden');
+        const btn = document.getElementById(`tab-btn-${id}`);
+        btn.classList.remove('bg-slate-700', 'text-white', 'shadow-sm');
+        btn.classList.add('text-slate-400');
+      });
+
+      document.getElementById(`tab-${tabId}`).classList.remove('hidden');
+      const activeBtn = document.getElementById(`tab-btn-${tabId}`);
+      activeBtn.classList.add('bg-slate-700', 'text-white', 'shadow-sm');
+      activeBtn.classList.remove('text-slate-400');
+
+      if (tabId === 'tactical') {
+        renderTacticalPitchBoard();
+      }
+      try { localStorage.setItem(STORAGE_KEY_TAB, tabId); } catch (e) {}
+      window.scrollTo({ top: 0, behavior: 'auto' });
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text.toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      applyTheme(isLightTheme(), false);
+      if (!restoreAutosave()) {
+        schedule = [];
+        rounds = [];
+        initDefaultRoster(20);
+        recalculateTournamentMath();
+      }
+      autosaveReady = true;
+    });
+
+    // Offline support: only active when the app is served over http(s) alongside sw.js
+    if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(() => {});
+      });
+    }
+  </script>
+</body>
+</html>
+
